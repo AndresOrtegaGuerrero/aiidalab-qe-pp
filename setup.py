@@ -21,11 +21,13 @@ setup(
     classifiers=[],
     packages=find_packages(),
     install_requires=[
-        "weas-widget",
     ],
     entry_points={
         "aiidalab_qe.properties": [
             "pp = aiidalab_qe_pp:pp",
+        ],
+        "aiida.workflows": [
+            "pp_app.pp = aiidalab_qe_pp.ppworkchain:PPWorkChain",
         ],
     },
     package_data={},

@@ -40,7 +40,7 @@ class Setting(Panel):
         self.calc_stm = ipw.Checkbox(description="STM Plots", value=False)
 
         #Calc Charge Density Options
-        self.charge_dens_options = ipw.Dropdown(options=[('Total charge', 1), ('Spin up', 2), ('Spin down', 3)],
+        self.charge_dens_options = ipw.Dropdown(options=[('Total charge', 0), ('Spin up', 1), ('Spin down', 2)],
                                                  value=1, description='Options:', disabled=False)
         #Output Charge Density Output
         self.charge_dens_output = ipw.Output()
@@ -110,9 +110,9 @@ class Setting(Panel):
 
     def set_charge_dens_options(self, lsda):
         if not lsda:
-            self.charge_dens_options.options = [('Total charge', 1)]
+            self.charge_dens_options.options = [('Total charge', 0)]
         else:
-            self.charge_dens_options.options = [('Total charge', 1), ('Spin up', 2), ('Spin down', 3)]
+            self.charge_dens_options.options = [('Total charge', 0), ('Spin up', 1), ('Spin down', 2)]
 
 
     def _reset_calc_options(self):
@@ -148,6 +148,51 @@ class Setting(Panel):
         
         else:
             self._reset_calc_options()
+
+    # def get_panel_value(self):
+    #     return {
+    #         'calc_charge_dens': self.calc_charge_dens.value,
+    #         'calc_spin_dens': self.calc_spin_dens.value,
+    #         'calc_wfn': self.calc_wfn.value,
+    #         'calc_ildos': self.calc_ildos.value,
+    #         'calc_stm': self.calc_stm.value,
+    #         'charge_dens_options': self.charge_dens_options.value,
+    #         'sel_orbital': self.sel_orbital.orbitals,
+    #         'ildos_emin': self.ildos_emin.value,
+    #         'ildos_emax': self.ildos_emax.value,
+    #         'stm_sample_bias': self.stm_sample_bias.value,
+    #         'pwcalc_avail': self.pwcalc_list.pwcalc_avail.value,
+    #     }
+
+    def get_value(self, attribute):
+        """Safely get the value of an attribute if it exists, else return the attribute itself."""
+        if hasattr(attribute, 'value'):
+            return attribute.value
+        if hasattr(attribute, 'orbitals'):
+            return attribute.orbitals
+        return attribute
+
+    def get_panel_value(self):
+    
+        return {
+            'calc_charge_dens': self.get_value(self.calc_charge_dens),
+            'calc_spin_dens': self.get_value(self.calc_spin_dens),
+            'calc_wfn': self.get_value(self.calc_wfn),
+            'calc_ildos': self.get_value(self.calc_ildos),
+            'calc_stm': self.get_value(self.calc_stm),
+            'charge_dens_options': self.get_value(self.charge_dens_options),
+            'sel_orbital': self.get_value(self.sel_orbital),  # Assuming 'orbitals' is always correctly set
+            'ildos_emin': self.get_value(self.ildos_emin),
+            'ildos_emax': self.get_value(self.ildos_emax),
+            'stm_sample_bias': self.get_value(self.stm_sample_bias),
+            'pwcalc_avail': self.get_value(self.pwcalc_list.pwcalc_avail),
+            'input_structure': self.input_structure,
+        }
+
+    def reset(self):
+        self._reset_calc_options()
+        self.pwcalc_list._reset()
+
 
 
 

@@ -1,9 +1,11 @@
 from aiidalab_qe.common.panel import OutlinePanel
 from aiidalab_widgets_base import ComputationalResourcesWidget
 
-#from .result import Result
-from .setting import Setting
-#from .workchain import workchain_and_builder
+
+from .result import Result
+from aiidalab_qe_pp.setting import Setting
+from aiidalab_qe_pp.workchain import workchain_and_builder
+
 
 __version__ = "0.0.1"
 
@@ -21,8 +23,8 @@ pp_code = ComputationalResourcesWidget(
 
 pp = {
     "outline": PpOutline,
-    "setting": Setting,
     "code": {"pp": pp_code},
-    #"result": Result,
-    #"workchain": workchain_and_builder,
+    "setting": Setting,
+    "workchain": workchain_and_builder,
+    "result": Result,
 }
