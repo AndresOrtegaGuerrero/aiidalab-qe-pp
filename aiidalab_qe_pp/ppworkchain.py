@@ -8,15 +8,15 @@ from aiida.common import AttributeDict
 
 PpCalculation = CalculationFactory("quantumespresso.pp")
 
-#Test to replace other functions 
 def get_parameters(calc_type: str, settings: dict) -> orm.Dict:
-    """Return the parameters based on the calculation type."""
-    # Dictionary to hold unique configuration for each calculation type
+    """Return the parameters based on the calculation type, with optional settings."""
+
+    # Existing code with slight modifications for safe accessing
     calc_config = {
         "charge_dens": {
             "plot_num": 0,
             "extra_params": {
-                "spin_component": settings.get("spin_component", 1),  # Default value if not provided
+                "spin_component": settings.get("spin_component", 1),
             }
         },
         "spin_dens": {
@@ -26,24 +26,24 @@ def get_parameters(calc_type: str, settings: dict) -> orm.Dict:
         "wfn": {
             "plot_num": 7,
             "extra_params": {
-                "kpoint(1)": settings["kpoint(1)"],
-                "kpoint(2)": settings["kpoint(2)"],
-                "kband(1)": settings["kband(1)"],
-                "kband(2)": settings["kband(2)"]
+                "kpoint(1)": settings.get("kpoint(1)", 0),  # Default values or handle appropriately
+                "kpoint(2)": settings.get("kpoint(2)", 0),
+                "kband(1)": settings.get("kband(1)", 0),
+                "kband(2)": settings.get("kband(2)", 0)
             }
         },
         "stm": {
             "plot_num": 5,
             "extra_params": {
-                "sample_bias": settings["sample_bias"]
+                "sample_bias": settings.get("sample_bias", 0.0)  # Default value
             }
         },
         "ildos": {
             "plot_num": 10,
             "extra_params": {
-                "emin": settings["emin"],
-                "emax": settings["emax"],
-                "spin_component": settings.get("spin_component", 1)  # Default for handling missing settings
+                "emin": settings.get("emin", -10),  # Reasonable default
+                "emax": settings.get("emax", 10),
+                "spin_component": settings.get("spin_component", 1)
             }
         }
     }
@@ -61,94 +61,6 @@ def get_parameters(calc_type: str, settings: dict) -> orm.Dict:
     
     return orm.Dict(parameters)
 
-def get_parameters_charge_dens(setting: dict) -> orm.Dict:
-    """Return the parameters for the charge density calculation."""
-
-    parameters = orm.Dict(
-            {
-                "INPUTPP": {
-                    "plot_num": 0,
-                    "spin_component": setting["spin_component"], 
-                },
-                "PLOT": {
-                    "iflag": 3,
-                },
-            }
-        )
-    
-    return parameters
-
-def get_parameters_spin_dens(setting: dict) -> orm.Dict:
-    """Return the parameters for the spin density calculation."""
-
-    parameters = orm.Dict(
-            {
-                "INPUTPP": {
-                    "plot_num": 6, 
-                },
-                "PLOT": {
-                    "iflag": 3,
-                },
-            }
-        )
-    
-    return parameters
-
-def get_parameters_wfn(setting: dict) -> orm.Dict:
-    """Return the parameters for the wavefunction calculation."""
-
-    parameters = orm.Dict(
-            {
-                "INPUTPP": {
-                    "plot_num": 7,
-                    "kpoint(1)": setting["kpoint(1)"] ,
-                    "kpoint(1)": setting["kpoint(2)"],
-                    "kband(1)": setting["kband(1)"],
-                    "kband(1)": setting["kband(2)"],
-                },
-                "PLOT": {
-                    "iflag": 3,
-                },
-            }
-        )
-    
-    return parameters
-
-def get_parameters_stm(setting: dict) -> orm.Dict:
-    """Return the parameters for the STM calculation."""
-
-    parameters = orm.Dict(
-            {
-                "INPUTPP": {
-                    "plot_num": 5,
-                    "sample_bias": setting["sample_bias"],
-                },
-                "PLOT": {
-                    "iflag": 3,
-                },
-            }
-        )
-    
-    return parameters
-
-def get_parameters_ildos(setting: dict) -> orm.Dict:
-    """Return the parameters for the ILDOS calculation."""
-
-    parameters = orm.Dict(
-            {
-                "INPUTPP": {
-                    "plot_num": 10,
-                    "emin": setting["emin"],
-                    "emax": setting["emax"],
-                    "spin_component": setting["spin_component"],
-                },
-                "PLOT": {
-                    "iflag": 3,
-                },
-            }
-        )
-    
-    return parameters
 
 class PPWorkChain(WorkChain):
     "WorkChain to compute vibrational property of a crystal."
@@ -263,8 +175,7 @@ class PPWorkChain(WorkChain):
     def run_charge_dens(self):
         inputs = AttributeDict(self.exposed_inputs(PpCalculation, namespace="pp_calc"))
         inputs.parent_folder = self.inputs.parent_folder
-        charge_dens_parameters = get_parameters_charge_dens(self.inputs.parameters["charge_dens"])
-        #charge_dens_parameters = get_parameters("charge_dens", self.inputs.parameters["charge_dens"]) Test to replace other functions
+        charge_dens_parameters = get_parameters("charge_dens", self.inputs.parameters["charge_dens"]) 
         inputs.parameters = charge_dens_parameters
         running = self.submit(PpCalculation, **inputs)
         self.report(f"launching Charge Density PpCalculation<{running.pk}>")
@@ -285,7 +196,7 @@ class PPWorkChain(WorkChain):
     def run_spin_dens(self):
         inputs = AttributeDict(self.exposed_inputs(PpCalculation, namespace="pp_calc"))
         inputs.parent_folder = self.inputs.parent_folder
-        spin_dens_parameters = get_parameters_spin_dens(self.inputs.parameters["spin_dens"])
+        spin_dens_parameters = get_parameters("spin_dens", {}) 
         inputs.parameters = spin_dens_parameters
         running = self.submit(PpCalculation, **inputs)
         self.report(f"launching Spin Density PpCalculation<{running.pk}>")
@@ -320,7 +231,7 @@ class PPWorkChain(WorkChain):
     def run_ildos(self):
         inputs = AttributeDict(self.exposed_inputs(PpCalculation, namespace="pp_calc"))
         inputs.parent_folder = self.inputs.parent_folder
-        ildos_parameters = get_parameters_ildos(self.inputs.parameters["ildos"])
+        ildos_parameters = get_parameters("ildos", self.inputs.parameters["ildos"])
         inputs.parameters = ildos_parameters
         running = self.submit(PpCalculation, **inputs)
         self.report(f"launching ILDOS PpCalculation<{running.pk}>")
@@ -340,7 +251,7 @@ class PPWorkChain(WorkChain):
     def run_stm(self):
         inputs = AttributeDict(self.exposed_inputs(PpCalculation, namespace="pp_calc"))
         inputs.parent_folder = self.inputs.parent_folder
-        stm_parameters = get_parameters_stm(self.inputs.parameters["stm"])
+        stm_parameters = get_parameters("stm", self.inputs.parameters["stm"])
         inputs.parameters = stm_parameters
         running = self.submit(PpCalculation, **inputs)
         self.report(f"launching STM PpCalculation<{running.pk}>")

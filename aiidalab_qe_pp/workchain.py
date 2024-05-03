@@ -8,7 +8,7 @@ def get_builder(codes, structure, parameters):
 
     from copy import deepcopy
 
-    pp_code = codes.pop("pp")
+    pp_code = codes.pop("pp")["code"]
 
 
     # Filter the dictionary to include only keys that start with 'calc_'
@@ -22,7 +22,8 @@ def get_builder(codes, structure, parameters):
     remote_folder = aiida_node.outputs.remote_folder
 
     #StructureData Used
-    structure = parameters["pp"]["structure"]
+    pk = parameters["pp"]["structure_pk"]
+    structure = orm.load_node(pk)
     #Parameters
     pp_parameters = {
         "charge_dens": { "spin_component" : parameters["pp"]["charge_dens_options"]} , 

@@ -87,7 +87,7 @@ class OrbitalSelectionWidget(HorizontalItemWidget):
     def __init__(self):
         self.kpoint = ipw.BoundedIntText(
             description="Kpoint:",
-            min = 0,
+            min = 1,
             max = 100,
             step =1,
             value=0,
@@ -190,6 +190,7 @@ class PwCalcListWidget(ipw.VBox):
     def _reset(self):
         if self.structure is None:
             self.select_helper.value = self._default_pwcalc_list_helper_text
+            self.reset_pwcalc_avail()
             return
 
         self.select_helper.value = """<div style="line-height: 140%; padding-top: 0px; padding-bottom: 10px; color: green;">
@@ -325,6 +326,17 @@ class PwCalcListWidget(ipw.VBox):
             return self.pwcalc_avail_helper
         elif self.pwcalc_type.value == 'nscf' and not self.nscf_calc_list:
             return self.pwcalc_avail_helper
+    
+    def set_options_pwcalc_avail(self, pk):
+        calc = orm.load_node(pk)
+        description = "PK: {} LSDA = {} SOC={}".format(calc.pk, calc.outputs.output_parameters['lsda'], calc.outputs.output_parameters['spin_orbit_calculation'])
+        self.pwcalc_avail.options = [(description, pk)]
+        self.pwcalc_avail.description = "PwCalculation used:"
+
+    def reset_pwcalc_avail(self):
+        self.pwcalc_avail.options = []
+        self.pwcalc_avail.description = "PwCalculation available:"
+        
 
     
 

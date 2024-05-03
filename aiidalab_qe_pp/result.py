@@ -1,6 +1,6 @@
 from aiidalab_qe.common.panel import ResultPanel
 import ipywidgets as ipw
-
+from weas_widget import WeasWidget
 class Result(ResultPanel):
     title = "PP Results"
     workchain_label = "pp"
@@ -8,50 +8,57 @@ class Result(ResultPanel):
     def __init__(self, node=None, **kwargs):
         super().__init__(node=node, identifier="pp", **kwargs)
 
+        self.guiConfig = {
+            "enabled": True,
+            "components": {"atomsControl": True, "buttons": True},
+            "buttons": {
+                "fullscreen": True,
+                "download": True,
+                "measurement": True,
+            },
+        }
+
+        self.display_button = ipw.Button(description="Display", button_style="primary")
+        self.result_tabs = ipw.Tab()
+        children_result_widget = []
+        tab_titles = []
+
+        # List of potential data outputs and their corresponding tab titles
+        output_types = [
+            ("charge_dens", "Charge Density"),
+            ("spin_dens", "Spin Density"),
+            ("wfn", "Kohn-Sham Wavefunctions"),
+            ("ildos", "Integrated Local Density of States"),
+            ("stm", "Scanning Tunneling Microscopy"),
+        ]
+        
+        for data_key, title in output_types:
+            viewer = self.create_viewer(data_key)
+            if viewer:
+                children_result_widget.append(viewer)
+                tab_titles.append(title)
+
+        self.result_tabs.children = children_result_widget
+        for index, title in enumerate(tab_titles):
+            self.result_tabs.set_title(index, title)
+        self.display_button.on_click(self.update_children_result_widget)
+
+
     def _update_view(self):
 
-        tab_titles = []
-        children_result_widget = ()
-
-        try:
-            charge_dens = self.node.outputs.pp.outputs.charge_dens
-            tab_titles.append("Charge Density")
-        except AttributeError:
-            charge_dens = None
-
-        try:
-            spin_dens = self.node.outputs.pp.outputs.spin_dens
-            tab_titles.append("Spin Density")
-        except AttributeError:
-            spin_dens = None
-
-        try:
-            wfn = self.node.outputs.pp.outputs.wfn
-            tab_titles.append("Kohn-Sham Wavefunctions")
-        except AttributeError:
-            wfn = None
-
-        try:
-            ildos = self.node.outputs.pp.outputs.ildos
-            tab_titles.append("Integrated Local Density of States")
-        except AttributeError:
-            ildos = None
-
-        try:
-            stm = self.node.outputs.pp.outputs.stm 
-            tab_titles.append("Scanning Tunneling Microscopy")
-        except AttributeError:
-            stm = None
-
-        self.result_tabs = ipw.Tab(children=children_result_widget)
-
-        for title_index in range(len(tab_titles)):
-            self.result_tabs.set_title(title_index, tab_titles[title_index])
-
-        self.children = [self.result_tabs]
+        self.children = [self.display_button, self.result_tabs]
 
 
-
+    def update_children_result_widget(self, _):
+        for i in self.result_tabs.children:
+            i._widget.send_js_task({"name": "tjs.onWindowResize", "kwargs": {}})
+            i._widget.send_js_task(
+                {
+                    "name": "tjs.updateCameraAndControls",
+                    "kwargs": {"direction": [0, -100, 0]},
+                }
+            )
+            
     def fetch_node_outputs(self):
         output_types = {
             'charge_dens': "Charge Density",
@@ -71,3 +78,17 @@ class Result(ResultPanel):
             outputs[output_key] = output_value
 
         return tab_titles, outputs
+
+    def create_viewer(self, data_key):
+        """Creates a WeasWidget viewer if the data is available."""
+        try:
+            data_output = getattr(self.node.outputs.pp, data_key).output_data
+            viewer = WeasWidget(guiConfig=self.guiConfig)
+            viewer.from_ase(self.node.inputs.pp.structure.get_ase())
+            data = data_output.get_array("data")
+            viewer.avr.iso.volumetric_data = {"values": data}
+            viewer.avr.iso.settings = [{"isovalue": 0.001, "mode": 0}]
+
+            return viewer
+        except AttributeError:
+            return None

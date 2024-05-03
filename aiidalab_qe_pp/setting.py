@@ -148,22 +148,7 @@ class Setting(Panel):
         
         else:
             self._reset_calc_options()
-
-    # def get_panel_value(self):
-    #     return {
-    #         'calc_charge_dens': self.calc_charge_dens.value,
-    #         'calc_spin_dens': self.calc_spin_dens.value,
-    #         'calc_wfn': self.calc_wfn.value,
-    #         'calc_ildos': self.calc_ildos.value,
-    #         'calc_stm': self.calc_stm.value,
-    #         'charge_dens_options': self.charge_dens_options.value,
-    #         'sel_orbital': self.sel_orbital.orbitals,
-    #         'ildos_emin': self.ildos_emin.value,
-    #         'ildos_emax': self.ildos_emax.value,
-    #         'stm_sample_bias': self.stm_sample_bias.value,
-    #         'pwcalc_avail': self.pwcalc_list.pwcalc_avail.value,
-    #     }
-
+            
     def get_value(self, attribute):
         """Safely get the value of an attribute if it exists, else return the attribute itself."""
         if hasattr(attribute, 'value'):
@@ -186,12 +171,31 @@ class Setting(Panel):
             'ildos_emax': self.get_value(self.ildos_emax),
             'stm_sample_bias': self.get_value(self.stm_sample_bias),
             'pwcalc_avail': self.get_value(self.pwcalc_list.pwcalc_avail),
-            'input_structure': self.input_structure,
+            'pwcalc_type': self.get_value(self.pwcalc_list.pwcalc_type),
+            'structure_pk': self.input_structure.pk,
         }
 
     def reset(self):
         self._reset_calc_options()
         self.pwcalc_list._reset()
+
+    def set_panel_value(self, input_dict):
+    #     """ Load a dictionary of the input parameters for the plugin. """
+        self.pwcalc_list.pwcalc_type.value = input_dict.get("pwcalc_type", "bands")
+        self.pwcalc_list.set_options_pwcalc_avail(input_dict.get("pwcalc_avail", None))
+        self.calc_charge_dens.value = input_dict.get("calc_charge_dens", False) 
+        self.calc_spin_dens.value = input_dict.get("calc_spin_dens", False)
+        self.calc_wfn.value = input_dict.get("calc_wfn", False)
+        self.calc_ildos.value = input_dict.get("calc_ildos", False)
+        self.calc_stm.value = input_dict.get("calc_stm", False)
+        self.charge_dens_options.value = input_dict.get("charge_dens_options", 0)
+
+    #     self.sel_orbital.orbitals = input_dict['sel_orbital']
+        self.ildos_emax.value = input_dict.get("ildos_emax", 0.0)
+        self.ildos_emin.value = input_dict.get("ildos_emin", 0.0)
+        self.stm_sample_bias.value = input_dict.get("stm_sample_bias", 0.0)
+    #     self._update_calc_options({'new': self.pwcalc_list.pwcalc_avail.value})
+
 
 
 
