@@ -27,8 +27,9 @@ def get_builder(codes, structure, parameters):
     #Parameters
     pp_parameters = {
         "charge_dens": { "spin_component" : parameters["pp"]["charge_dens_options"]} , 
-        "ildos": { "emin" : parameters["pp"]["ildos_emin"], "emax" : parameters["pp"]["ildos_emax"]},
+        "ildos": { "emin" : parameters["pp"]["ildos_emin"], "emax" : parameters["pp"]["ildos_emax"] , "ildos_spin_component" : parameters["pp"]["ildos_spin_component"]},
         "stm": { "sample_bias" : parameters["pp"]["stm_sample_bias"]},
+        "wfn": { "orbitals" : parameters["pp"]["sel_orbital"] , "lsda" : parameters["pp"]["lsda"]}, 
 
 
     }

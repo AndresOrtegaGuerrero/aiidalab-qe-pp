@@ -10,6 +10,15 @@ from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
 from aiida_quantumespresso.calculations.pw import PwCalculation
 from IPython.display import HTML, clear_output, display
 
+# Cube Visual Widget
+from weas_widget import WeasWidget
+from IPython.display import display, Javascript
+import base64
+import io
+import tempfile
+from pymatgen.io.common import VolumetricData
+import os
+
 '''Inspired and adapted from https://github.com/nanotech-empa/aiidalab-empa-surfaces/blob/master/surfaces_tools/widgets/pdos.py(author: yakutovicha)'''
 
 class HorizontalItemWidget(ipw.HBox):
@@ -77,7 +86,7 @@ class VerticalStackWidget(ipw.VBox):
         self.items = self.items[:index] + self.items[index + 1 :]
         del item
 
-    def length(self):
+    def length(self): #This function we can delete it ... it is not used
         return len(self.items)
 
     
@@ -88,7 +97,7 @@ class OrbitalSelectionWidget(HorizontalItemWidget):
         self.kpoint = ipw.BoundedIntText(
             description="Kpoint:",
             min = 1,
-            max = 100,
+            max = 1000,
             step =1,
             value=0,
             style={"description_width": "initial"},
@@ -109,10 +118,14 @@ class OrbitalListWidget(VerticalStackWidget):
         
     def reset(self,):
         self.items = []
+    #Set the max value of the self.kpoint widget in the OrbitalSelectionWidget
+    def set_max_kpoint(self, max_kpoint):
+        for item in self.items:
+            item.kpoint.max = max_kpoint
 
     @property
     def orbitals(self):
-        return [(item.kpoint.value, item.kbands.value) for item in self.items]
+        return [(item.kbands.value, item.kpoint.value) for item in self.items]
 
 
 class PwCalcListWidget(ipw.VBox):
@@ -133,7 +146,7 @@ class PwCalcListWidget(ipw.VBox):
         </div>""",
         layout=ipw.Layout(max_width="100%"),
     )
-
+    no_avail_cals = tl.Bool(False)
     def __init__(
         self,
         structure: orm.StructureData,
@@ -142,7 +155,6 @@ class PwCalcListWidget(ipw.VBox):
         self.select_helper = ipw.HTML(self._default_pwcalc_list_helper_text)
         self.pwcalc_avail_helper = ipw.HTML()
         self.pwcalc_avail_output = ipw.Output()
-
         self.wc_type = ipw.ToggleButtons(
             options=[('PwCalculation', 'pw_calc'), ('From scratch', 'scratch')],
             description='WorkChain to use',
@@ -174,6 +186,7 @@ class PwCalcListWidget(ipw.VBox):
         
         self.pwcalc_type.observe(self.update_pwcalc_avail, names='value')
         self.wc_type.observe(self.display_pwcalc_output, names='value')
+
         super().__init__(
             children=[
                 self.select_helper,
@@ -293,12 +306,18 @@ class PwCalcListWidget(ipw.VBox):
                     self.pwcalc_avail_helper.value = """<div style="line-height: 140%; padding-top: 0px; padding-bottom: 10px; color: red;">
                     No Bands calculations available for this structure.
                     </div>"""
+                    self.no_avail_cals = True
+                else:
+                    self.no_avail_cals = False
             elif change['new'] == 'nscf':
                 self.pwcalc_avail.options = self.nscf_calc_list
                 if not self.nscf_calc_list:
                     self.pwcalc_avail_helper.value = """<div style="line-height: 140%; padding-top: 0px; padding-bottom: 10px; color: red;">
                     No Nscf calculations available for this structure.
                     </div>"""
+                    self.no_avail_cals = True
+                else:
+                    self.no_avail_cals = False
             else:
                 self.pwcalc_avail.options = []
         if self.wc_type.value == 'pw_calc':
@@ -346,12 +365,13 @@ class KpointInfoWidget(ipw.VBox):
         self.kbands_info = ipw.HTML()
         self.electron_info = ipw.HTML()
         self.kpoints_table = ipw.Output()
-
+        self.sel_orbital = OrbitalListWidget(item_class=OrbitalSelectionWidget, add_button_text="Add Orbital")
         super().__init__(
             children=[
                 self.kbands_info,
                 self.electron_info,
                 self.kpoints_table,
+                self.sel_orbital,
             ],
             **kwargs
         )
@@ -367,7 +387,6 @@ class KpointInfoWidget(ipw.VBox):
         rounded_kpoints = np.round(list_kpoints, 4).tolist()
         table_data = [(index + 1, kpoint) for index, kpoint in enumerate(rounded_kpoints)]
         table_html = "<table>"
-        #table_html += "<tr><th>Kpoint Index </th><th> Crystal coord </th></tr>"
         table_html += "<tr><th style='text-align:center; width: 100px;'>Kpoint</th><th style='text-align:center;'>Crystal</th></tr>"
         table_html += "<tr><th style='text-align:center; width: 100px;'>Index</th><th style='text-align:center;'>coord</th></tr>"
         for row in table_data:
@@ -389,6 +408,7 @@ class KpointInfoWidget(ipw.VBox):
         self.kbands_info.value = ""
         self.electron_info.value = ""
         self.clear_kpoints_table()
+        self.sel_orbital.reset()
     
     def clear_kpoints_table(self):
         with self.kpoints_table:
@@ -404,9 +424,93 @@ class KpointInfoWidget(ipw.VBox):
         try:
             kpoints = calc.inputs.kpoints.get_kpoints()
             self.update_kpoints_table(kpoints)
+            self.sel_orbital.set_max_kpoint(len(kpoints))
         except AttributeError:
             self.clear_kpoints_table()
         
 
 
     
+
+class CubeVisualWdiget(ipw.VBox):
+    """Widget to visualize the output data from PPWorkChain."""
+
+
+    def __init__(self, structure, cube_data , plot_num , **kwargs):
+
+        self.guiConfig = {
+            "enabled": True,
+            "components": {"atomsControl": True, "buttons": True},
+            "buttons": {
+                "fullscreen": True,
+                "download": True,
+                "measurement": True,
+            },
+        }
+        self.structure = structure
+        self.cube_data = cube_data.get_array("data")
+        self.plot_num = plot_num
+        self.viewer = self._set_viewer()
+
+        # Display Button
+        self.display_button = ipw.Button(description="Display", button_style="primary")
+
+        # Download Cubefile Button
+
+        self.download_button = ipw.Button(description="Download", button_style="primary")
+
+        self.buttons = ipw.HBox([self.display_button, self.download_button])
+
+        self.display_button.on_click(self._display)
+        self.download_button.on_click(self.download_cube)
+        super().__init__(children=[self.buttons,self.viewer], **kwargs)
+
+
+
+    def _set_viewer(self):
+        viewer = WeasWidget(guiConfig=self.guiConfig)
+        viewer.from_ase(self.structure.get_ase())
+        viewer.avr.iso.volumetric_data = {"values": self.cube_data}
+        viewer.avr.iso.settings = [{"isovalue": 0.001, "mode": 0}]
+        return viewer
+
+    def _display(self, _=None):
+        self.viewer._widget.send_js_task({"name": "tjs.onWindowResize", "kwargs": {}})
+        self.viewer._widget.send_js_task(
+            {
+                "name": "tjs.updateCameraAndControls",
+                "kwargs": {"direction": [0, -100, 0]},
+            }
+        )
+        
+    def download_cube(self, _=None):
+        # Create a temporary file, write to it, and initiate download
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".cube") as tmp:
+            # Write the cube data to a temporary file using pymatgen's VolumetricData
+            my_cube = VolumetricData(structure=self.structure.get_pymatgen(), data={"total": self.cube_data})
+            my_cube.to_cube(tmp.name)
+
+            # Move the file pointer back to the start for reading
+            tmp.seek(0)
+            raw_bytes = tmp.read()
+
+        # Encode the file content to base64
+        base64_payload = base64.b64encode(raw_bytes).decode()
+
+        # JavaScript to trigger download
+        filename = f"plot_{self.plot_num}.cube"
+        js_download = Javascript(
+            f"""
+            var link = document.createElement('a');
+            link.href = "data:application/octet-stream;base64,{base64_payload}";
+            link.download = "{filename}";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            """
+        )
+        display(js_download)
+
+        # Clean up by removing the temporary file
+        os.unlink(tmp.name)
+

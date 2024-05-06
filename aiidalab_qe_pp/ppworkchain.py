@@ -43,7 +43,7 @@ def get_parameters(calc_type: str, settings: dict) -> orm.Dict:
             "extra_params": {
                 "emin": settings.get("emin", -10),  # Reasonable default
                 "emax": settings.get("emax", 10),
-                "spin_component": settings.get("spin_component", 1)
+                "spin_component": settings.get("ildos_spin_component", 0)
             }
         }
     }
