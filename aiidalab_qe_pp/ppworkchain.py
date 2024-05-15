@@ -26,10 +26,9 @@ def get_parameters(calc_type: str, settings: dict) -> orm.Dict:
         "wfn": {
             "plot_num": 7,
             "extra_params": {
-                "kpoint(1)": settings.get("kpoint(1)", 0),  # Default values or handle appropriately
-                "kpoint(2)": settings.get("kpoint(2)", 0),
+                "kpoint(1)": settings.get("kpoint", 1),  # Default values or handle appropriately
                 "kband(1)": settings.get("kband(1)", 0),
-                "kband(2)": settings.get("kband(2)", 0)
+                **({"kband(2)": settings["kband(2)"]} if "kband(2)" in settings else {})
             }
         },
         "stm": {
@@ -110,10 +109,6 @@ class PPWorkChain(WorkChain):
             namespace_options={'required': False, 'help': 'Spin Density `PpCalculation`.'},
         )
         spec.expose_outputs(
-            PpCalculation, namespace='wfn',
-            namespace_options={'required': False, 'help': 'Wavefunction `PpCalculation`.'},
-        )
-        spec.expose_outputs(
             PpCalculation, namespace='ildos',
             namespace_options={'required': False, 'help': 'ILDOS `PpCalculation`.'},
         )
@@ -121,6 +116,14 @@ class PPWorkChain(WorkChain):
             PpCalculation, namespace='stm',
             namespace_options={'required': False, 'help': 'STM `PpCalculation`.'},
         )
+        spec.expose_outputs(
+            PpCalculation, namespace='wfn',
+            namespace_options={'required': False, 'help': 'WFN `PpCalculation`.'},
+        )
+        #spec.output_namespace('wfn', valid_type=orm.ArrayData, required=False, dynamic=True, help='Kohn-Sham Wavefunctions `PpCalculation`.')
+        spec.output_namespace('wfn', dynamic=True)
+ 
+
 
         spec.exit_code(201, 'ERROR_CHARGE_DENS_FAILED', message='The charge density calculation failed.')
         spec.exit_code(202, 'ERROR_SPIN_DENS_FAILED', message='The spin density calculation failed.')
@@ -214,16 +217,35 @@ class PPWorkChain(WorkChain):
         return "calc_wfn" in self.inputs.properties
     
     def run_wfn(self):
-        inputs = AttributeDict(self.exposed_inputs(PpCalculation, namespace="pp_calc"))
-        inputs.parent_folder = self.inputs.parent_folder
-        wfn_parameters = get_parameters_wfn(self.inputs.parameters["wfn"])
-        inputs.parameters = wfn_parameters
-        running = self.submit(PpCalculation, **inputs)
-        self.report(f"launching Wavefunction PpCalculation<{running.pk}>")
-        return ToContext(calc_wfn=running)
+
+        bands = self.inputs.parameters["wfn"]["orbitals"]
+        for band in self.inputs.parameters["wfn"]["orbitals"]:
+            if "kband(2)" in band:
+                label = f"kp_{band['kpoint']}_kb_{band['kband(1)']}_{band['kband(2)']}"
+            else:
+                label = f"kp_{band['kpoint']}_kb_{band['kband(1)']}"
+            
+            inputs = AttributeDict(self.exposed_inputs(PpCalculation, namespace="pp_calc"))
+            inputs.parent_folder = self.inputs.parent_folder
+            inputs.parameters = get_parameters("wfn", band)
+            inputs.metadata.label = label
+            inputs.metadata.call_link_label = label
+            future = self.submit(PpCalculation, **inputs)
+            self.report(f'launching Wavefunction `PpCalculation` <PK={future.pk}> for {label}')
+            self.to_context(**{label: future})
 
     def inspect_wfn(self):
-        pass
+        """Inspect the results of the wavefunction calculations"""
+        failed_runs = []
+        for label, workchain in self.ctx.items():
+            if label.startswith("kp_"):
+                if not workchain.is_finished_ok:
+                    self.report(f"Wavefunction PpCalculation {label} failed with exit status {workchain.exit_status}")
+                    failed_runs.append(label)
+        if failed_runs:
+            self.report('one or more workchains did not finish succesfully')
+            return self.exit_codes.ERROR_WFN_FAILED
+
 
     def should_run_ildos(self):
         return "calc_ildos" in self.inputs.properties
@@ -269,40 +291,47 @@ class PPWorkChain(WorkChain):
         """Attach the results of the PPWorkChain to the outputs."""
         failed = False
         for prop in self.inputs.properties:
-            if  self.ctx[f'{prop}'].is_finished_ok:
-                if prop == "calc_charge_dens":
+            if prop != "calc_wfn":
+
+                if self.ctx[f'{prop}'].is_finished_ok:
                     self.out_many(
                         self.exposed_outputs(
-                            self.ctx.calc_charge_dens, PpCalculation, namespace="charge_dens"
+                            self.ctx[f'{prop}'], PpCalculation, namespace=f'{prop[5:]}'
                         )
                     )
-                elif prop == "calc_spin_dens":
-                    self.out_many(
-                        self.exposed_outputs(
-                            self.ctx.calc_spin_dens, PpCalculation, namespace="spin_dens"
-                        )
-                    )
-                elif prop == "calc_wfn":
-                    self.out("wfn", self.ctx.calc_wfn.outputs.output_data)
-                elif prop == "calc_ildos":
-                    self.out_many(
-                        self.exposed_outputs(
-                            self.ctx.calc_ildos, PpCalculation, namespace="ildos"
-                        )
-                    )
-                elif prop == "calc_stm":
-                    self.out_many(
-                        self.exposed_outputs(
-                            self.ctx.calc_stm, PpCalculation, namespace="stm"
-                        )
-                    )
+                else:
+                    self.report(f"{prop[5:]} calculation failed")
+                    failed = True
             else:
-                self.report(f"{prop} calculation failed")
-                failed = True
+                wfn_found = False
+                wfn_outputs = {}
+                #orbital_data = {}
+                for label, workchain in self.ctx.items():
+                    if label.startswith("kp_"):
+                        wfn_found = True
+                        if workchain.is_finished_ok:
+                            wfn_outputs[label] = {}
+                            process = getattr(self.ctx, label)
+                            for key in process.outputs._get_keys():
+                                wfn_outputs[label][key] = getattr(process.outputs, key)
+                            #if "output_data_multiple" in workchain.outputs:
+                            #    orbital_data[label] = workchain.outputs.output_data_multiple
+                            #else:
+                            #    orbital_data[label] = workchain.outputs.output_data
+                        else:
+                            self.report(f"{label} calculation failed")
+                            failed = True
+                self.out("wfn", wfn_outputs)
+
+                if not wfn_found:
+                    self.report(f"No workchains found for 'calc_wfn' with labels starting with 'wfn_'")
+
+
         if failed:
             return self.exit_codes.ERROR_SUB_PROCESS_FAILED
         else:
             self.report("PPWorkChain completed successfully")
+
 
 
 

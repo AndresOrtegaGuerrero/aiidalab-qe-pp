@@ -432,12 +432,92 @@ class KpointInfoWidget(ipw.VBox):
 
     
 
-class CubeVisualWdiget(ipw.VBox):
+# class CubeVisualWdiget(ipw.VBox):
+#     """Widget to visualize the output data from PPWorkChain."""
+
+
+#     def __init__(self, structure, cube_data , plot_num , **kwargs):
+
+#         self.guiConfig = {
+#             "enabled": True,
+#             "components": {"atomsControl": True, "buttons": True},
+#             "buttons": {
+#                 "fullscreen": True,
+#                 "download": True,
+#                 "measurement": True,
+#             },
+#         }
+#         self.structure = structure
+#         self.cube_data = cube_data.get_array("data")
+#         self.plot_num = plot_num
+#         self.viewer = self._set_viewer()
+
+#         # Display Button
+#         self.display_button = ipw.Button(description="Display", button_style="primary")
+
+#         # Download Cubefile Button
+
+#         self.download_button = ipw.Button(description="Download", button_style="primary")
+
+#         self.buttons = ipw.HBox([self.display_button, self.download_button])
+
+#         self.display_button.on_click(self._display)
+#         self.download_button.on_click(self.download_cube)
+#         super().__init__(children=[self.buttons,self.viewer], **kwargs)
+
+
+
+#     def _set_viewer(self):
+#         viewer = WeasWidget(guiConfig=self.guiConfig)
+#         viewer.from_ase(self.structure.get_ase())
+#         viewer.avr.iso.volumetric_data = {"values": self.cube_data}
+#         viewer.avr.iso.settings = [{"isovalue": 0.001, "mode": 0}]
+#         return viewer
+
+#     def _display(self, _=None):
+#         self.viewer._widget.send_js_task({"name": "tjs.onWindowResize", "kwargs": {}})
+#         self.viewer._widget.send_js_task(
+#             {
+#                 "name": "tjs.updateCameraAndControls",
+#                 "kwargs": {"direction": [0, -100, 0]},
+#             }
+#         )
+        
+#     def download_cube(self, _=None):
+#         # Create a temporary file, write to it, and initiate download
+#         with tempfile.NamedTemporaryFile(delete=False, suffix=".cube") as tmp:
+#             # Write the cube data to a temporary file using pymatgen's VolumetricData
+#             my_cube = VolumetricData(structure=self.structure.get_pymatgen(), data={"total": self.cube_data})
+#             my_cube.to_cube(tmp.name)
+
+#             # Move the file pointer back to the start for reading
+#             tmp.seek(0)
+#             raw_bytes = tmp.read()
+
+#         # Encode the file content to base64
+#         base64_payload = base64.b64encode(raw_bytes).decode()
+
+#         # JavaScript to trigger download
+#         filename = f"plot_{self.plot_num}.cube"
+#         js_download = Javascript(
+#             f"""
+#             var link = document.createElement('a');
+#             link.href = "data:application/octet-stream;base64,{base64_payload}";
+#             link.download = "{filename}";
+#             document.body.appendChild(link);
+#             link.click();
+#             document.body.removeChild(link);
+#             """
+#         )
+#         display(js_download)
+
+#         # Clean up by removing the temporary file
+#         os.unlink(tmp.name)
+
+class CubeVisualWidget(ipw.VBox):
     """Widget to visualize the output data from PPWorkChain."""
 
-
-    def __init__(self, structure, cube_data , plot_num , **kwargs):
-
+    def __init__(self, structure, cube_data, plot_num, **kwargs):
         self.guiConfig = {
             "enabled": True,
             "components": {"atomsControl": True, "buttons": True},
@@ -448,7 +528,7 @@ class CubeVisualWdiget(ipw.VBox):
             },
         }
         self.structure = structure
-        self.cube_data = cube_data.get_array("data")
+        self.cube_data = cube_data
         self.plot_num = plot_num
         self.viewer = self._set_viewer()
 
@@ -456,22 +536,21 @@ class CubeVisualWdiget(ipw.VBox):
         self.display_button = ipw.Button(description="Display", button_style="primary")
 
         # Download Cubefile Button
-
         self.download_button = ipw.Button(description="Download", button_style="primary")
 
         self.buttons = ipw.HBox([self.display_button, self.download_button])
 
         self.display_button.on_click(self._display)
         self.download_button.on_click(self.download_cube)
-        super().__init__(children=[self.buttons,self.viewer], **kwargs)
 
-
+        super().__init__(children=[self.buttons, self.viewer], **kwargs)
 
     def _set_viewer(self):
         viewer = WeasWidget(guiConfig=self.guiConfig)
         viewer.from_ase(self.structure.get_ase())
+        isovalue = 2*np.std(self.cube_data) + np.mean(self.cube_data)
         viewer.avr.iso.volumetric_data = {"values": self.cube_data}
-        viewer.avr.iso.settings = [{"isovalue": 0.001, "mode": 0}]
+        viewer.avr.iso.settings = [{"isovalue": isovalue, "mode": 0}]
         return viewer
 
     def _display(self, _=None):
@@ -482,8 +561,8 @@ class CubeVisualWdiget(ipw.VBox):
                 "kwargs": {"direction": [0, -100, 0]},
             }
         )
-        
-    def download_cube(self, _=None):
+
+    def download_cube(self, _=None, filename="plot"):
         # Create a temporary file, write to it, and initiate download
         with tempfile.NamedTemporaryFile(delete=False, suffix=".cube") as tmp:
             # Write the cube data to a temporary file using pymatgen's VolumetricData
@@ -497,8 +576,12 @@ class CubeVisualWdiget(ipw.VBox):
         # Encode the file content to base64
         base64_payload = base64.b64encode(raw_bytes).decode()
 
+        #if filename is not provided, use plot_num
+        if filename == "plot":
+            filename = f"plot_{self.plot_num}"
+
         # JavaScript to trigger download
-        filename = f"plot_{self.plot_num}.cube"
+        filename = f"{filename}.cube"
         js_download = Javascript(
             f"""
             var link = document.createElement('a');
@@ -514,3 +597,66 @@ class CubeVisualWdiget(ipw.VBox):
         # Clean up by removing the temporary file
         os.unlink(tmp.name)
 
+
+class WfnVisualWidget(CubeVisualWidget):
+    """Widget to visualize the wavefunction data with additional kpoints and bands selection."""
+
+    def __init__(self, structure, cube_data_dict, kpoint_band_data, plot_num, **kwargs):
+        self.kpoint_band_data = kpoint_band_data  # This should be a list of dictionaries
+        self.cube_data_dict = cube_data_dict  # This should be a dictionary of cube_data objects
+
+        # Extract kpoints and bands from kpoint_band_data
+        kpoints = [entry['kpoint'] for entry in kpoint_band_data]
+        bands_dict = {entry['kpoint']: entry['bands'] for entry in kpoint_band_data}
+
+        # Initialize the Dropdowns
+        self.kpoints_dropdown = ipw.Dropdown(options=kpoints, description='Kpoint:')
+        self.bands_dropdown = ipw.Dropdown(description='Band:')
+        
+        # Set the bands options based on the initial kpoint selection
+        self._update_bands_options(self.kpoints_dropdown.value)
+
+        self.kpoints_dropdown.observe(self._on_kpoint_change, names='value')
+        self.bands_dropdown.observe(self._on_band_change, names='value')
+
+        # Add the new Dropdowns to the widget
+        self.controls = ipw.HBox([self.kpoints_dropdown, self.bands_dropdown])
+
+        # Initialize the viewer with the first kpoint-band combination
+        initial_kpoint = kpoints[0]
+        initial_band = bands_dict[initial_kpoint][0]
+        initial_cube_data = cube_data_dict[f"kp_{initial_kpoint}_kb_{initial_band}"].get_array("data")
+
+        super().__init__(structure, initial_cube_data, plot_num, **kwargs)
+        self.children = [self.controls, self.buttons, self.viewer]
+
+    def _update_bands_options(self, kpoint):
+        """Update the bands dropdown options based on the selected kpoint."""
+        bands = next(entry['bands'] for entry in self.kpoint_band_data if entry['kpoint'] == kpoint)
+        self.bands_dropdown.options = bands
+
+    def _on_kpoint_change(self, change):
+        """Callback function to update bands options when kpoint changes."""
+        self._update_bands_options(change['new'])
+        self._update_viewer()
+
+    def _on_band_change(self, change):
+        """Callback function to update viewer when band changes."""
+        self._update_viewer()
+
+    def _update_viewer(self):
+        """Update the viewer with the selected kpoint and band data."""
+        kpoint = self.kpoints_dropdown.value
+        band = self.bands_dropdown.value
+        key = f"kp_{kpoint}_kb_{band}"
+        self.cube_data = self.cube_data_dict.get(key).get_array("data")
+        isovalue = 2*np.std(self.cube_data) + np.mean(self.cube_data)
+        self.viewer.avr.iso.volumetric_data = {"values": self.cube_data}
+        self.viewer.avr.iso.settings = [{"isovalue": isovalue, "mode": 0}]
+
+    def download_cube(self, _=None):
+        """Download the cube file with the current kpoint and band in the filename."""
+        kpoint = self.kpoints_dropdown.value
+        band = self.bands_dropdown.value
+        filename = f"plot_wfn_kp_{kpoint}_kb_{band}"
+        super().download_cube(_=None, filename=filename)
