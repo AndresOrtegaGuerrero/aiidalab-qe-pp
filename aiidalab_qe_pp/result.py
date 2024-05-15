@@ -127,12 +127,14 @@ class Result(ResultPanel):
                 
             else:
                 data_dict = cube_data_dict(self.node)
-                orbitals = process_orbitals(self.node.inputs.pp.parameters['wfn'])
+                orbitals = process_orbitals(self.node.inputs.pp.parameters["wfn"])
                 viewer = WfnVisualWidget(
                     structure=self.node.inputs.pp.structure,
                     cube_data_dict=data_dict,
                     kpoint_band_data=orbitals,
-                    plot_num=data_key
+                    number_of_k_points=self.node.inputs.pp.parameters.get_dict()["wfn"]["number_of_k_points"],
+                    lsda=self.node.inputs.pp.parameters.get_dict()["wfn"]["lsda"],
+                    #plot_num=data_key
                 )
                 return viewer
 

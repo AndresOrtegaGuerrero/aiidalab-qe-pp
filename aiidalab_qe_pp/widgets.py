@@ -515,17 +515,24 @@ class CubeVisualWidget(ipw.VBox):
 class WfnVisualWidget(CubeVisualWidget):
     """Widget to visualize the wavefunction data with additional kpoints and bands selection."""
 
-    def __init__(self, structure, cube_data_dict, kpoint_band_data, plot_num, **kwargs):
+    def __init__(self, structure, cube_data_dict, kpoint_band_data, number_of_k_points, lsda, **kwargs):
         self.kpoint_band_data = kpoint_band_data  # This should be a list of dictionaries
         self.cube_data_dict = cube_data_dict  # This should be a dictionary of cube_data objects
-
+        self.lsda = lsda
+        self.number_of_k_points = number_of_k_points
+        
         # Extract kpoints and bands from kpoint_band_data
         kpoints = [entry['kpoint'] for entry in kpoint_band_data]
         bands_dict = {entry['kpoint']: entry['bands'] for entry in kpoint_band_data}
+        
+        if lsda:
+            kpoints = kpoints[:len(kpoints) // 2]
 
         # Initialize the Dropdowns
-        self.kpoints_dropdown = ipw.Dropdown(options=kpoints, description='Kpoint:')
-        self.bands_dropdown = ipw.Dropdown(description='Band:')
+        self.kpoints_dropdown = ipw.Dropdown(options=kpoints, description='Kpoint:', style={"description_width": "initial"},
+            layout={'width': '150px'})
+        self.bands_dropdown = ipw.Dropdown(description='Band:' , style={"description_width": "initial"},
+            layout={'width': '150px'})
         
         # Set the bands options based on the initial kpoint selection
         self._update_bands_options(self.kpoints_dropdown.value)
@@ -533,16 +540,25 @@ class WfnVisualWidget(CubeVisualWidget):
         self.kpoints_dropdown.observe(self._on_kpoint_change, names='value')
         self.bands_dropdown.observe(self._on_band_change, names='value')
 
+        self.spin = ipw.Dropdown(options=[("Up", "up"), ("Down", "down")], description="Spin:", style={"description_width": "initial"},
+            layout={'width': '150px'})
+        
+        self.spin.observe(self._on_spin_change, names='value')
         # Add the new Dropdowns to the widget
-        self.controls = ipw.HBox([self.kpoints_dropdown, self.bands_dropdown])
+        self.controls = ipw.HBox([self.kpoints_dropdown, self.bands_dropdown, self.spin])
 
         # Initialize the viewer with the first kpoint-band combination
         initial_kpoint = kpoints[0]
         initial_band = bands_dict[initial_kpoint][0]
         initial_cube_data = cube_data_dict[f"kp_{initial_kpoint}_kb_{initial_band}"].get_array("data")
 
-        super().__init__(structure, initial_cube_data, plot_num, **kwargs)
+        super().__init__(structure, initial_cube_data, plot_num="wfn", **kwargs)
         self.children = [self.controls, self.buttons, self.viewer]
+        if self.lsda:
+            self.spin.layout.display = "block"
+        else:
+            self.spin.layout.display = "none"
+
 
     def _update_bands_options(self, kpoint):
         """Update the bands dropdown options based on the selected kpoint."""
@@ -557,11 +573,20 @@ class WfnVisualWidget(CubeVisualWidget):
     def _on_band_change(self, change):
         """Callback function to update viewer when band changes."""
         self._update_viewer()
+    
+    def _on_spin_change(self, change):
+        """Callback function to update viewer when spin changes."""
+        self._update_viewer()
+        
 
     def _update_viewer(self):
         """Update the viewer with the selected kpoint and band data."""
         kpoint = self.kpoints_dropdown.value
         band = self.bands_dropdown.value
+        
+        if self.lsda and self.spin.value == "down":
+            kpoint += self.number_of_k_points
+            
         key = f"kp_{kpoint}_kb_{band}"
         self.cube_data = self.cube_data_dict.get(key).get_array("data")
         isovalue = 2*np.std(self.cube_data) + np.mean(self.cube_data)
@@ -571,6 +596,11 @@ class WfnVisualWidget(CubeVisualWidget):
     def download_cube(self, _=None):
         """Download the cube file with the current kpoint and band in the filename."""
         kpoint = self.kpoints_dropdown.value
+        band = self.bands_dropdown.value
+        
+        if self.lsda and self.spin.value == "down":
+            kpoint += self.number_of_k_points
+            
         band = self.bands_dropdown.value
         filename = f"plot_wfn_kp_{kpoint}_kb_{band}"
         super().download_cube(_=None, filename=filename)
