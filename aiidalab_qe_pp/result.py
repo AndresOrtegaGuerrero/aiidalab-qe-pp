@@ -136,9 +136,6 @@ class Result(ResultPanel):
                 )
                 return viewer
 
-
-
-
         except AttributeError as e:
             #print(f"AttributeError while creating viewer for key: {data_key}, Error: {e}")
             return None
