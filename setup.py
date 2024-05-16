@@ -24,6 +24,12 @@ setup(
         "weas-widget",
     ],
     entry_points={
+        "aiida.calculations": [
+            "critic2 = aiidalab_qe_pp.critic2: Critic2Calculation",
+        ],
+        "aiida.parsers": [
+            "critic2 = aiidalab_qe_pp.critic2: Critic2Parser",
+        ],
         "aiidalab_qe.properties": [
             "pp = aiidalab_qe_pp:pp",
         ],

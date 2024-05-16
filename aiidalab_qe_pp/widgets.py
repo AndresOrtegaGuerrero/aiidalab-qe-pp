@@ -135,13 +135,14 @@ class PwCalcListWidget(ipw.VBox):
             Input structure is not set. Please set the structure first.
             </div>"""
 
+#, or select 'From scratch' to compute it. If you opt for <strong>'From scratch'</strong>, ensure you've
+        # set the desired properties like <strong>Electronic band structure</strong> or <strong>Projected density of states</strong> in <strong>Basic
+        # Settings</strong>, along with specifying the 'pw.x type to use' option. Ensure proper setup of the property in
+        # both Basic Settings and this tab.
     description = ipw.HTML(
         """<div style="line-height: 140%; padding-top: 0px; padding-bottom: 10px">
         Please choose the wavefunction source: either from a previous Bands or Nscf calculation linked 
-        to your structure, or select 'From scratch' to compute it. If you opt for <strong>'From scratch'</strong>, ensure you've
-        set the desired properties like <strong>Electronic band structure</strong> or <strong>Projected density of states</strong> in <strong>Basic
-        Settings</strong>, along with specifying the 'pw.x type to use' option. Ensure proper setup of the property in
-        both Basic Settings and this tab.
+        to your structure.
         <h5>Be careful with the clean-up the work directory option in the Advanced Settings.</h5>
         </div>""",
         layout=ipw.Layout(max_width="100%"),
@@ -156,7 +157,8 @@ class PwCalcListWidget(ipw.VBox):
         self.pwcalc_avail_helper = ipw.HTML()
         self.pwcalc_avail_output = ipw.Output()
         self.wc_type = ipw.ToggleButtons(
-            options=[('PwCalculation', 'pw_calc'), ('From scratch', 'scratch')],
+            #options=[('PwCalculation', 'pw_calc'), ('From scratch', 'scratch')],
+            options=[('PwCalculation', 'pw_calc')],
             description='WorkChain to use',
             disabled=False,
             button_style='', # 'success', 'info', 'warning', 'danger' or ''
@@ -434,7 +436,7 @@ class CubeVisualWidget(ipw.VBox):
     def __init__(self, structure, cube_data, plot_num, **kwargs):
         self.guiConfig = {
             "enabled": True,
-            "components": {"atomsControl": True, "buttons": True},
+            "components": {"atomsControl": True, "buttons": True, "cameraControls" : True,},
             "buttons": {
                 "fullscreen": True,
                 "download": True,
@@ -480,7 +482,14 @@ class CubeVisualWidget(ipw.VBox):
         # Create a temporary file, write to it, and initiate download
         with tempfile.NamedTemporaryFile(delete=False, suffix=".cube") as tmp:
             # Write the cube data to a temporary file using pymatgen's VolumetricData
-            my_cube = VolumetricData(structure=self.structure.get_pymatgen(), data={"total": self.cube_data})
+            if self.structure.pbc != [True, True, True]:
+                structure_temp = self.structure.clone()
+                structure_temp.pbc = [True, True, True]
+                structure = structure_temp.get_pymatgen()
+            else:
+                structure = self.structure.get_pymatgen()
+
+            my_cube = VolumetricData(structure=structure, data={"total": self.cube_data})
             my_cube.to_cube(tmp.name)
 
             # Move the file pointer back to the start for reading
