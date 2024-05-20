@@ -25,7 +25,7 @@ class Critic2Calculation(CalcJob):
     """
     _DEFAULT_INPUT_FILE = "aiida.in"
     _DEFAULT_OUTPUT_FILE = "aiida.out"
-    _FILEOUT = "aiida_stm.dat"
+    _FILEOUT = "stdin_stm.dat"
 
     @classmethod
     def define(cls, spec):
@@ -82,18 +82,17 @@ class Critic2Calculation(CalcJob):
         # Prepare the input parameters
         parameters = self.inputs.parameters.get_dict()
         # Prepare the file with the ILDOS filename
-        ildos_filename = self.inputs.ildos_filename.value
+        ildos_filename = "aiida.cube"
         # Write the input file
         input_filename = self.inputs.metadata.options.input_filename
         #Prerate the input file content
-        file_content = create_file_content(input_file, parameters)
+        file_content = create_file_content(ildos_filename, parameters)
 
         # Write the input file
         with folder.open(input_filename, "w") as infile:
             infile.write(file_content)
 
-        source = self.inputs.get('ildos_folder', None)
-            
+    
 
 
         remote_copy_list = []
@@ -102,16 +101,17 @@ class Critic2Calculation(CalcJob):
 
         #Prepare the files to copy
         dirpath = os.path.join(source.get_remote_path(), self.inputs.ildos_filename.value)
-        remote_copy_list.append((source.computer.uuid, dirpath, self.inputs.ildos_filename.value))
+        remote_copy_list.append((source.computer.uuid, dirpath, "aiida.cube"))
 
         codeinfo = CodeInfo()
-        codeinfo.cmdline_params = settings.pop('CMDLINE', [])
+        codeinfo.cmdline_params = []
         codeinfo.stdin_name = self.inputs.metadata.options.input_filename
         codeinfo.stdout_name = self.inputs.metadata.options.output_filename
         codeinfo.code_uuid = self.inputs.code.uuid
 
         # Prepare CalcInfo to be returned to aiida
         calcinfo = CalcInfo()
+        calcinfo.codes_info = [codeinfo]
         calcinfo.uuid = self.uuid
         calcinfo.local_copy_list = []
         calcinfo.remote_copy_list = remote_copy_list
