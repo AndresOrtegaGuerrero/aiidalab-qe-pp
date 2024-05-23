@@ -2,7 +2,7 @@ from aiidalab_qe.common.panel import ResultPanel
 import ipywidgets as ipw
 from weas_widget import WeasWidget
 
-from .widgets import CubeVisualWidget , WfnVisualWidget
+from .widgets import CubeVisualWidget , WfnVisualWidget, STMNodesWidget
 
 import re
 
@@ -117,15 +117,20 @@ class Result(ResultPanel):
         """Creates a CubeVisualWidget or WfnVisualWidget viewer based on the data key."""
         try:
             data_output = getattr(self.node.outputs.pp, data_key)
-            if data_key != "wfn":
+            if data_key not in ["wfn", "stm"]:
                 viewer = CubeVisualWidget(
                     structure=self.node.inputs.pp.structure,
                     cube_data=data_output.output_data.get_array("data"),
                     plot_num=data_key
                 )
                 return viewer
-                
-            else:
+            
+            elif data_key == "stm":
+                node = self.node.outputs.pp.stm
+                viewer = STMNodesWidget(node=node)
+                return viewer
+
+            elif data_key == "wfn":
                 data_dict = cube_data_dict(self.node)
                 orbitals = process_orbitals(self.node.inputs.pp.parameters["wfn"])
                 viewer = WfnVisualWidget(

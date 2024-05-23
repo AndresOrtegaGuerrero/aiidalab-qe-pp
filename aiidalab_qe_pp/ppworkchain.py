@@ -77,8 +77,8 @@ def parse_stm_parameters(settings: dict) -> dict:
     # Change eV to Rydberg
     sample_bias_list = [bias / 13.6056980659 for bias in sample_bias_list]
 
-    #Change from pico Ampere to atomic units of current
-    currents_list = [current / 6623.6182375082 for current in currents_list]
+    #What about number expressed as 10^(-3) ? 
+    #currents_list = [current / 6623618237.5082 for current in currents_list]
     
     return {
         "sample_bias": sample_bias_list,

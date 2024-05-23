@@ -76,7 +76,7 @@ class Setting(Panel):
         #Calc STM Options
         self.stm_sample_bias = ipw.Text(value='0.0', description='Sample bias List (eV):', disabled=False, style={'description_width': 'initial'})   
         self.stm_heights = ipw.Text(value='2.0', description='Heights List (Å): ', disabled=False, style={'description_width': 'initial'})
-        self.stm_currents = ipw.Text(value='0.1', description='Currents List (uA): ', disabled=False, style={'description_width': 'initial'})
+        self.stm_currents = ipw.Text(value='0.00005', description='Currents List (a.u): ', disabled=False, style={'description_width': 'initial'}, placeholder='arbitrary units') 
         self.stm_parameters = ipw.HBox([self.stm_sample_bias, self.stm_heights, self.stm_currents])
         self.stm_options = ipw.VBox([self.calc_stm_help, self.stm_parameters])
         #Output STM Output

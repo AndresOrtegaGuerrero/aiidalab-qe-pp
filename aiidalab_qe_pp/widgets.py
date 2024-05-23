@@ -636,12 +636,12 @@ class STMPlotWidget(ipw.VBox):
         'default_color_scale': "Hot"
     }
 
-    def __init__(self, node, **kwargs):
-        self.x_cart = node.outputs['stm_data'].get_array('xcart')
-        self.y_cart = node.outputs['stm_data'].get_array('ycart')
-        self.f_stm = node.outputs['stm_data'].get_array('fstm')
-        self.mode = node.inputs.parameters.get_dict()['mode']
-        self.value = node.inputs.parameters.get_dict()['value']
+    def __init__(self, node, mode, value, **kwargs):
+        self.x_cart = node['stm_data'].get_array('xcart')
+        self.y_cart = node['stm_data'].get_array('ycart')
+        self.f_stm = node['stm_data'].get_array('fstm')
+        self.mode = mode
+        self.value = value
         self._process_data()
         self.plot = self._create_plot()
         
@@ -655,12 +655,12 @@ class STMPlotWidget(ipw.VBox):
         )
         self.zmax_text.observe(self._update_zmax, names='value')
 
-        self.download_button = ipw.Button(description="Download", button_style="primary")
+        
 
         super().__init__(
             children=[
                 self.plot,
-                ipw.HBox([self.zmax_text, self.download_button])
+                self.zmax_text,
             ],
             **kwargs,
         )
@@ -690,13 +690,13 @@ class STMPlotWidget(ipw.VBox):
             x=self.unique_x,
             y=self.unique_y,
             colorscale=self.SETTINGS['default_color_scale'],
-            colorbar=dict(title='Electron Density (a.u.)')
+            colorbar=dict(title=f"{'Distance to the surface (Å)' if self.mode == 'current' else 'Electron density (a.u.)'}")
         )
         
         fig = go.Figure(data=heatmap)
         fig.update_layout(
             title=dict(
-                text=f'Constant {self.mode} plot, {self.value} density',
+                text=f"Constant {self.mode} plot, {self.value} {'Å' if self.mode == 'height' else 'pA'}",
                 x=0.5,  # Center the title
                 y=0.85,  # Adjust the vertical position of the title
                 xanchor='center',
@@ -781,3 +781,78 @@ class STMPlotWidget(ipw.VBox):
 
     def _update_zmax(self, change):
         self.plot.data[0].update(zmax=change['new'])
+
+
+class STMNodesWidget(ipw.VBox):
+
+
+    def __init__(self, node, **kwargs):
+        self.node = node
+        self.list_calcs = list(self.node.keys())
+        self.dict_calcs = self.parse_strings_to_dicts(self.list_calcs)
+
+        self.calc_nodes = ipw.Dropdown(
+            options=self._get_calc_options(), # List of available calculations
+            value=0,
+            description="Calculation:",
+            disabled=False,
+            style={"description_width": "initial"},
+            layout={'width': '600px'}
+        )
+
+        self.download_button = ipw.Button(description="Download", button_style="primary")
+        self.plot = STMPlotWidget(self.node[self.list_calcs[0]], mode=self.dict_calcs[0]['mode'], value=self.dict_calcs[0]['value'])
+
+        self.calc_nodes.observe(self._on_calc_change, names='value')
+
+        super().__init__(
+            children=[
+                self.calc_nodes,
+                self.plot,
+                self.download_button,
+            ],
+            **kwargs,
+        )
+
+    def parse_strings_to_dicts(self, strings):
+        result = []
+        for s in strings:
+            parts = s.split('_')
+            
+            # Extract and parse stm_bias value
+            if parts[2] == 'neg':
+                bias_sign = -1
+                bias_index = 3
+            else:
+                bias_sign = 1
+                bias_index = 2
+            
+            stm_bias_str = parts[bias_index] + '.' + parts[bias_index + 1]
+            stm_bias = bias_sign * float(stm_bias_str)
+            
+            # Extract mode and value
+            mode = parts[bias_index + 2]
+            value_str = parts[bias_index + 3] + '.' + parts[bias_index + 4]
+            value = float(value_str)
+            
+            # Create the dictionary
+            result.append({
+                "stm_bias": stm_bias,
+                "mode": mode,
+                "value": value
+            })
+            
+        return result
+
+    def _get_calc_options(self):
+        return [
+        (
+            f"STM Bias: {entry['stm_bias']} eV, Mode: {entry['mode']}, Value: {entry['value']} {'Å' if entry['mode'] == 'height' else 'pA'}", 
+            index
+        )
+        for index, entry in enumerate(self.dict_calcs)
+        ]
+
+    def _on_calc_change(self, change):
+        self.plot = STMPlotWidget(node = self.node[self.list_calcs[change['new']]], mode=self.dict_calcs[change['new']]['mode'], value=self.dict_calcs[change['new']]['value'])
+        self.children = [self.calc_nodes, self.plot, self.download_button]
