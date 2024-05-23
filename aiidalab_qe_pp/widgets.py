@@ -9,6 +9,8 @@ from aiida_quantumespresso.workflows.pw.bands import PwBandsWorkChain
 from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
 from aiida_quantumespresso.calculations.pw import PwCalculation
 from IPython.display import HTML, clear_output, display
+from scipy.interpolate import griddata
+import plotly.graph_objects as go
 
 # Cube Visual Widget
 from weas_widget import WeasWidget
@@ -147,6 +149,12 @@ class PwCalcListWidget(ipw.VBox):
         </div>""",
         layout=ipw.Layout(max_width="100%"),
     )
+    comp_description = ipw.HTML(
+        """<div style="line-height: 140%; padding-top: 0px; padding-bottom: 10px">
+        <h5>For the next step, select the same computer used in the selected PwCalculation because the necessary files are stored there.</h5>
+        </div>""",
+        layout=ipw.Layout(max_width="100%"),
+    )
     no_avail_cals = tl.Bool(False)
     def __init__(
         self,
@@ -180,7 +188,7 @@ class PwCalcListWidget(ipw.VBox):
             description="PwCalculation available:",
             disabled=False,
             style={"description_width": "initial"},
-            layout={'width': '500px'}
+            layout={'width': '600px'}
         )
 
         self.bands_calc_list = []
@@ -194,6 +202,7 @@ class PwCalcListWidget(ipw.VBox):
                 self.select_helper,
                 self.description,
                 self.wc_type,
+                self.comp_description,
                 self.pwcalc_type,
                 self.pwcalc_avail_output,
                 ]
@@ -291,7 +300,7 @@ class PwCalcListWidget(ipw.VBox):
         for calc in calc_list:
             try:
                 remote_dir = calc.outputs.remote_folder.listdir()
-                description = "PK: {} LSDA = {} SOC={}".format(calc.pk, calc.outputs.output_parameters['lsda'], calc.outputs.output_parameters['spin_orbit_calculation'])
+                description = "PK: {} LSDA = {} SOC = {} Computer = {}".format(calc.pk, calc.outputs.output_parameters['lsda'], calc.outputs.output_parameters['spin_orbit_calculation'], calc.computer.label)
                 
                 avail_list.append((description, calc.pk))
             except OSError:
@@ -350,7 +359,7 @@ class PwCalcListWidget(ipw.VBox):
     
     def set_options_pwcalc_avail(self, pk):
         calc = orm.load_node(pk)
-        description = "PK: {} LSDA = {} SOC={}".format(calc.pk, calc.outputs.output_parameters['lsda'], calc.outputs.output_parameters['spin_orbit_calculation'])
+        description = "PK: {} LSDA = {} SOC = {} Computer = {} ".format(calc.pk, calc.outputs.output_parameters['lsda'], calc.outputs.output_parameters['spin_orbit_calculation'], calc.computer.label)
         self.pwcalc_avail.options = [(description, pk)]
         self.pwcalc_avail.description = "PwCalculation used:"
 
@@ -613,3 +622,162 @@ class WfnVisualWidget(CubeVisualWidget):
         band = self.bands_dropdown.value
         filename = f"plot_wfn_kp_{kpoint}_kb_{band}"
         super().download_cube(_=None, filename=filename)
+
+
+
+
+class STMPlotWidget(ipw.VBox):
+    SETTINGS = {
+        'margin': {'l': 50, 'r': 50, 'b': 50, 't': 80},
+        'button_layer_1_height': 1.3,
+        'width': 800,
+        'height': 600,
+        'color_scales': ["Hot", "Cividis", "Greys", "Viridis"],
+        'default_color_scale': "Hot"
+    }
+
+    def __init__(self, node, **kwargs):
+        self.x_cart = node.outputs['stm_data'].get_array('xcart')
+        self.y_cart = node.outputs['stm_data'].get_array('ycart')
+        self.f_stm = node.outputs['stm_data'].get_array('fstm')
+        self.mode = node.inputs.parameters.get_dict()['mode']
+        self.value = node.inputs.parameters.get_dict()['value']
+        self._process_data()
+        self.plot = self._create_plot()
+        
+        self.zmax_text = ipw.BoundedFloatText(
+            value=np.max(self.z_grid),
+            min=np.min(self.z_grid),
+            max=np.max(self.z_grid),
+            step=(np.max(self.z_grid)-np.min(self.z_grid))/100,
+            description='Z Max:',
+            continuous_update=False
+        )
+        self.zmax_text.observe(self._update_zmax, names='value')
+
+        self.download_button = ipw.Button(description="Download", button_style="primary")
+
+        super().__init__(
+            children=[
+                self.plot,
+                ipw.HBox([self.zmax_text, self.download_button])
+            ],
+            **kwargs,
+        )
+
+    def _process_data(self):
+        valid_indices = ~np.isnan(self.x_cart) & ~np.isnan(self.y_cart) & ~np.isnan(self.f_stm)
+        x_valid = self.x_cart[valid_indices]
+        y_valid = self.y_cart[valid_indices]
+        z_valid = self.f_stm[valid_indices]
+
+        epsilon = 1e-6 
+        self.unique_x = np.unique(np.where(np.abs(x_valid) < epsilon, 0, x_valid))
+        self.unique_y = np.unique(np.where(np.abs(y_valid) < epsilon, 0, y_valid))
+
+        X, Y = np.meshgrid(self.unique_x, self.unique_y)
+        Z = griddata((x_valid, y_valid), z_valid, (X, Y), method='cubic')
+        
+        self.x_grid = X
+        self.y_grid = Y
+        self.z_grid = Z
+
+    def _create_plot(self):
+
+
+        heatmap = go.Heatmap(
+            z=self.z_grid,
+            x=self.unique_x,
+            y=self.unique_y,
+            colorscale=self.SETTINGS['default_color_scale'],
+            colorbar=dict(title='Electron Density (a.u.)')
+        )
+        
+        fig = go.Figure(data=heatmap)
+        fig.update_layout(
+            title=dict(
+                text=f'Constant {self.mode} plot, {self.value} density',
+                x=0.5,  # Center the title
+                y=0.85,  # Adjust the vertical position of the title
+                xanchor='center',
+                yanchor='top'
+            ),
+            xaxis=dict(
+                title='x (Å)',
+                range=[np.min(self.unique_x), np.max(self.unique_x)],
+                tickmode='auto',
+                ticks='outside',
+                showline=True,
+                mirror=True,
+                showgrid=False
+            ),
+            yaxis=dict(
+                title='y (Å)',
+                range=[np.min(self.unique_y), np.max(self.unique_y)],
+                tickmode='auto',
+                ticks='outside',
+                showline=True,
+                mirror=True,
+                showgrid=False
+            ),
+            autosize=False,
+            width=self.SETTINGS['width'],
+            height=self.SETTINGS['height'],
+            margin=self.SETTINGS['margin']
+        )
+        
+        fig.update_layout(
+            updatemenus=[
+                dict(
+                    buttons=[
+                        dict(
+                            args=["colorscale", colorscale],
+                            label=colorscale,
+                            method="restyle"
+                        ) for colorscale in self.SETTINGS['color_scales']
+                    ],
+                    direction="down",
+                    pad={"r": 10, "t": 10},
+                    showactive=True,
+                    x=0.1,
+                    xanchor="left",
+                    y=self.SETTINGS['button_layer_1_height'],
+                    yanchor="top"
+                ),
+                dict(
+                    buttons=[
+                        dict(
+                            args=["reversescale", False],
+                            label="False",
+                            method="restyle"
+                        ),
+                        dict(
+                            args=["reversescale", True],
+                            label="True",
+                            method="restyle"
+                        )
+                    ],
+                    direction="down",
+                    pad={"r": 10, "t": 10},
+                    showactive=True,
+                    x=0.39,
+                    xanchor="left",
+                    y=self.SETTINGS['button_layer_1_height'],
+                    yanchor="top"
+                ),
+            ]
+        )
+        
+        fig.update_layout(
+            annotations=[
+                dict(text="Colorscale", x=-0.03, xref="paper", y=self.SETTINGS['button_layer_1_height'] - 0.05, yref="paper",
+                     align="left", showarrow=False),
+                dict(text="Reverse<br>Colorscale", x=0.26, xref="paper", y=self.SETTINGS['button_layer_1_height'] - 0.025,
+                     yref="paper", showarrow=False),
+            ]
+        )
+
+        return go.FigureWidget(fig)
+
+    def _update_zmax(self, change):
+        self.plot.data[0].update(zmax=change['new'])

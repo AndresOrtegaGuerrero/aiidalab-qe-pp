@@ -27,7 +27,12 @@ class Setting(Panel):
         )
         self.calc_options_help= ipw.HTML(
             """<div style="line-height: 140%; padding-top: 0px; padding-bottom: 5px">
-            Please select the different calculations options:
+            <h5>Please select the different calculations options:</h5>
+            </div>"""
+        )
+        self.calc_stm_help= ipw.HTML(
+            """<div style="line-height: 140%; padding-top: 0px; padding-bottom: 5px">
+            Write the list of parameters (Bias , Heights and Currents) to compute separated by a space. For example: 0.0 0.1 0.2
             </div>"""
         )
         #PwCalcList Widget
@@ -69,8 +74,11 @@ class Setting(Panel):
         self.ildos_output = ipw.Output()
 
         #Calc STM Options
-        self.stm_sample_bias = ipw.FloatText(value=0.0, description='Sample bias (Ry):', disabled=False, style={'description_width': 'initial'})   
-
+        self.stm_sample_bias = ipw.Text(value='0.0', description='Sample bias List (eV):', disabled=False, style={'description_width': 'initial'})   
+        self.stm_heights = ipw.Text(value='2.0', description='Heights List (Å): ', disabled=False, style={'description_width': 'initial'})
+        self.stm_currents = ipw.Text(value='0.1', description='Currents List (uA): ', disabled=False, style={'description_width': 'initial'})
+        self.stm_parameters = ipw.HBox([self.stm_sample_bias, self.stm_heights, self.stm_currents])
+        self.stm_options = ipw.VBox([self.calc_stm_help, self.stm_parameters])
         #Output STM Output
         self.stm_output = ipw.Output()
         
@@ -79,7 +87,7 @@ class Setting(Panel):
         #self.calc_wfn.observe(self._display_widget_options(self.wfn_output, self.sel_orbital), names='value')
         self.calc_wfn.observe(self._display_widget_options(self.kpoints_info_output, self.kpoints_info), names='value')
         self.calc_ildos.observe(self._display_widget_options(self.ildos_output, self.ildos_options), names='value')
-        self.calc_stm.observe(self._display_widget_options(self.stm_output, self.stm_sample_bias), names='value')
+        self.calc_stm.observe(self._display_widget_options(self.stm_output, self.stm_options), names='value')
         
         self.pwcalc_list.pwcalc_avail.observe(self._update_calc_options, names='value')
         self.pwcalc_list.pwcalc_type.observe(self._update_calc_type_options, names='value')
@@ -206,6 +214,8 @@ class Setting(Panel):
             'ildos_emax': self.get_value(self.ildos_emax),
             'ildos_spin_component': self.get_value(self.ildos_spin_component),
             'stm_sample_bias': self.get_value(self.stm_sample_bias),
+            'stm_heights': self.get_value(self.stm_heights),
+            'stm_currents': self.get_value(self.stm_currents),
             'pwcalc_avail': self.get_value(self.pwcalc_list.pwcalc_avail),
             'pwcalc_type': self.get_value(self.pwcalc_list.pwcalc_type),
             'structure_pk': self.input_structure.pk,
@@ -229,7 +239,9 @@ class Setting(Panel):
         self.ildos_emax.value = input_dict.get("ildos_emax", 0.0)
         self.ildos_emin.value = input_dict.get("ildos_emin", 0.0)
         self.ildos_spin_component.value = input_dict.get("ildos_spin_component", 0)
-        self.stm_sample_bias.value = input_dict.get("stm_sample_bias", 0.0)
+        #self.stm_sample_bias.value = input_dict.get("stm_sample_bias", '0.0')
+        self.stm_heights.value = input_dict.get("stm_heights", '2.0')
+        self.stm_currents.value = input_dict.get("stm_currents", '0.1')
          
   
 

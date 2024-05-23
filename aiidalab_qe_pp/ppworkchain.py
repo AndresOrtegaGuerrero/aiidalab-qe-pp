@@ -7,6 +7,7 @@ from aiida.common import AttributeDict
 
 
 PpCalculation = CalculationFactory("quantumespresso.pp")
+Critic2Calculation = CalculationFactory('critic2')
 
 def get_parameters(calc_type: str, settings: dict) -> orm.Dict:
     """Return the parameters based on the calculation type, with optional settings."""
@@ -60,6 +61,72 @@ def get_parameters(calc_type: str, settings: dict) -> orm.Dict:
     
     return orm.Dict(parameters)
 
+def parse_stm_parameters(settings: dict) -> dict:
+    """Parse the STM parameters from settings into list of parameters."""
+    sample_bias_text = settings.get("sample_bias")
+    heights_text = settings.get("heights")
+    currents_text = settings.get("currents")
+
+    try:
+        sample_bias_list = text2floatlist(sample_bias_text)
+        heights_list = text2floatlist(heights_text)
+        currents_list = text2floatlist(currents_text)
+    except ValueError:
+        raise ValueError("Invalid STM parameters")
+    
+    # Change eV to Rydberg
+    sample_bias_list = [bias / 13.6056980659 for bias in sample_bias_list]
+
+    #Change from pico Ampere to atomic units of current
+    currents_list = [current / 6623.6182375082 for current in currents_list]
+    
+    return {
+        "sample_bias": sample_bias_list,
+        "heights": heights_list,
+        "currents": currents_list
+    }
+        
+
+
+def text2floatlist(input_string):
+    # Split the input string into substrings
+    string_list = input_string.split()
+    float_list = [float(num) for num in string_list]
+    return float_list
+
+
+def create_valid_link_label(value):
+    """
+    This function creates a valid link label in AiiDA by:
+
+    1. Converting the value to a string (if necessary).
+    2. Handling negative values by prepending "neg_".
+    3. Replacing any non-alphanumeric characters with underscores.
+
+    Args:
+        value: The value to incorporate into the link label.
+
+    Returns:
+        str: The corrected and valid link label.
+    """
+
+    # Ensure value is a string
+    if not isinstance(value, str):
+        value = str(value)
+
+    # Handle negative values
+    prefix = ""
+    if value.startswith('-'):
+        prefix = "neg_"  # Prepend "neg_" for negative values
+        value = value[1:]  # Remove the leading hyphen
+
+    # Replace . with _
+    valid_label = prefix + value.replace(".", "_")
+
+    # Remove any remaining non-alphanumeric characters
+    valid_label = "".join(char for char in valid_label if char.isalnum() or char == "_")
+
+    return valid_label
 
 class PPWorkChain(WorkChain):
     "WorkChain to compute vibrational property of a crystal."
@@ -76,6 +143,7 @@ class PPWorkChain(WorkChain):
                    help='The properties to calculate, used to control the logic of PPWorkChain.')
         spec.input('parameters', valid_type=orm.Dict, required=False,)
         spec.expose_inputs(PpCalculation, namespace='pp_calc', exclude=['parent_folder','parameters'])
+        spec.expose_inputs(Critic2Calculation, namespace='critic2_calc', exclude=['parent_folder','parameters'])
         spec.outline(
             if_(cls.should_run_charge_dens)(
                 cls.run_charge_dens,
@@ -96,6 +164,8 @@ class PPWorkChain(WorkChain):
             if_(cls.should_run_stm)(
                 cls.run_stm,
                 cls.inspect_stm,
+                cls.run_critic2,
+                cls.inspect_critic2,
             ),
             cls.results,
         )
@@ -120,6 +190,7 @@ class PPWorkChain(WorkChain):
             PpCalculation, namespace='wfn',
             namespace_options={'required': False, 'help': 'WFN `PpCalculation`.'},
         )
+        spec.output_namespace('stm', dynamic=True)
         #spec.output_namespace('wfn', valid_type=orm.ArrayData, required=False, dynamic=True, help='Kohn-Sham Wavefunctions `PpCalculation`.')
         spec.output_namespace('wfn', dynamic=True)
  
@@ -138,6 +209,7 @@ class PPWorkChain(WorkChain):
         cls,
         parent_folder, 
         pp_code,
+        critic2_code,
         parameters,
         properties,
         protocol=None,
@@ -158,11 +230,27 @@ class PPWorkChain(WorkChain):
         builder.properties = properties
         builder.pp_calc.code = pp_code
 
-        #Temporary while we update to the new resources schema
-        builder.pp_calc.metadata.options.resources = {
+        # builder.pp_calc.metadata.options = {
+        #     "resources": {
+        #         "num_machines": 1,
+        #         "num_mpiprocs_per_machine": 1,
+        #     }, 
+        #     "max_wallclock_seconds": 10800,
+        #     "withmpi": False,
+        # }
+
+
+        builder.critic2_calc.code = critic2_code
+
+        builder.critic2_calc.metadata.options = {
+            "resources": {
                 "num_machines": 1,
                 "num_mpiprocs_per_machine": 1,
-            } 
+            }, 
+            "max_wallclock_seconds": 10800,
+            "withmpi": False,
+        }
+
         builder.parameters = parameters
         builder.structure = structure
 
@@ -271,27 +359,102 @@ class PPWorkChain(WorkChain):
         return "calc_stm" in self.inputs.properties
 
     def run_stm(self):
-        inputs = AttributeDict(self.exposed_inputs(PpCalculation, namespace="pp_calc"))
-        inputs.parent_folder = self.inputs.parent_folder
-        stm_parameters = get_parameters("stm", self.inputs.parameters["stm"])
-        inputs.parameters = stm_parameters
-        running = self.submit(PpCalculation, **inputs)
-        self.report(f"launching STM PpCalculation<{running.pk}>")
-        return ToContext(calc_stm=running)
+        
+        stm_parameters = parse_stm_parameters(self.inputs.parameters["stm"])
+
+        for bias_index, bias in enumerate(stm_parameters["sample_bias"]):
+            inputs = AttributeDict(self.exposed_inputs(PpCalculation, namespace="pp_calc"))
+            inputs.parent_folder = self.inputs.parent_folder
+            inputs.parameters = get_parameters("stm", {"sample_bias": bias})
+            bias_ev = bias_ev = text2floatlist(self.inputs.parameters["stm"]["sample_bias"])[bias_index]
+            bias_label = create_valid_link_label(bias_ev)
+            inputs.metadata.label = f"bias_{bias_label}"
+            inputs.metadata.call_link_label = f"bias_{bias_label}"
+            running = self.submit(PpCalculation, **inputs)
+            self.report(f"launching STM PpCalculation<{running.pk}> bias_{bias_label}")
+            self.to_context(**{f"bias_{bias_label}": running})
 
     def inspect_stm(self):
-        """Inspect the results of the STM calculation."""
-        calculation = self.ctx.calc_stm
-
-        if not calculation.is_finished_ok:
-            self.report(f"STM PpCalculation failed with exit status {calculation.exit_status}")
+        """Inspect the results of the STM calculations."""
+        failed_runs = []
+        for label, workchain in self.ctx.items():
+            if label.startswith("bias_"):
+                if not workchain.is_finished_ok:
+                    self.report(f"Wavefunction PpCalculation {label} failed with exit status {workchain.exit_status}")
+                    failed_runs.append(label)
+        if failed_runs:
+            self.report('one or more workchains did not finish succesfully')
             return self.exit_codes.ERROR_STM_FAILED
+
+            
+    def run_critic2(self):
+
+        stm_parameters = parse_stm_parameters(self.inputs.parameters["stm"])
+
+        for bias_index, bias in enumerate(stm_parameters["sample_bias"]):
+
+            bias_ev = bias_ev = text2floatlist(self.inputs.parameters["stm"]["sample_bias"])[bias_index]
+            bias_label = create_valid_link_label(bias_ev)
+           
+            if stm_parameters["heights"]:
+                for height_index, height in enumerate(stm_parameters["heights"]):
+                    
+                    z_axis = self.inputs.structure.cell_lengths[2]
+                    height_critic = height / z_axis
+
+                    #for labeling with . in the name 
+                    height_label = str(height).replace(".", "_")
+
+                    inputs = AttributeDict(self.exposed_inputs(Critic2Calculation, namespace="critic2_calc"))
+                    inputs.parent_folder = self.ctx[f"bias_{bias_label}"].outputs.remote_folder
+                    parameters = orm.Dict(dict={"mode": "height", "value": height_critic})
+                    inputs.parameters = parameters
+                    inputs.metadata.label = f"stm_bias_{bias_label}_height_{height_label}"
+                    inputs.metadata.call_link_label = f"stm_bias_{bias_label}_height_{height_label}"
+                    running = self.submit(Critic2Calculation, **inputs)
+                    self.report(f"launching STM Critic2Calculation<{running.pk}> stm_bias_{bias_label}_height_{height_label}")
+                    self.to_context(**{f"stm_bias_{bias_label}_height_{height_label}": running})
+
+            if stm_parameters["currents"]:
+
+                for current_index, current in enumerate(stm_parameters["currents"]):
+
+                    current_pA = text2floatlist(self.inputs.parameters["stm"]["currents"])[current_index]
+
+                    #for labeling with . in the name
+                    current_label = str(current_pA).replace(".", "_")
+
+                    inputs = AttributeDict(self.exposed_inputs(Critic2Calculation, namespace="critic2_calc"))
+                    inputs.parent_folder = self.ctx[f"bias_{bias_label}"].outputs.remote_folder
+                    parameters = orm.Dict(dict={"mode": "current", "value": current})
+                    inputs.parameters = parameters
+                    inputs.metadata.label = f"stm_bias_{bias_label}_current_{current_label}"
+                    inputs.metadata.call_link_label = f"stm_bias_{bias_label}_current_{current_label}"
+                    running = self.submit(Critic2Calculation, **inputs)
+                    self.report(f"launching STM Critic2Calculation<{running.pk}> stm_bias_{bias_label}_current_{current_label}")
+                    self.to_context(**{f"stm_bias_{bias_label}_current_{current_label}": running})
+
+
+
+    def inspect_critic2(self):
+        """Inspect the results of the STM calculations."""
+        failed_runs = []
+        for label, workchain in self.ctx.items():
+            if label.startswith("stm_"):
+                if not workchain.is_finished_ok:
+                    self.report(f"STM Critic2Calculation {label} failed with exit status {workchain.exit_status}")
+                    failed_runs.append(label)
+        if failed_runs:
+            self.report('one or more workchains did not finish succesfully')
+            return self.exit_codes.ERROR_STM_FAILED
+
+
 
     def results(self):
         """Attach the results of the PPWorkChain to the outputs."""
         failed = False
         for prop in self.inputs.properties:
-            if prop != "calc_wfn":
+            if prop not in ["calc_wfn", "calc_stm"]:
 
                 if self.ctx[f'{prop}'].is_finished_ok:
                     self.out_many(
@@ -302,10 +465,9 @@ class PPWorkChain(WorkChain):
                 else:
                     self.report(f"{prop[5:]} calculation failed")
                     failed = True
-            else:
+            elif prop == "calc_wfn":
                 wfn_found = False
                 wfn_outputs = {}
-                #orbital_data = {}
                 for label, workchain in self.ctx.items():
                     if label.startswith("kp_"):
                         wfn_found = True
@@ -314,10 +476,6 @@ class PPWorkChain(WorkChain):
                             process = getattr(self.ctx, label)
                             for key in process.outputs._get_keys():
                                 wfn_outputs[label][key] = getattr(process.outputs, key)
-                            #if "output_data_multiple" in workchain.outputs:
-                            #    orbital_data[label] = workchain.outputs.output_data_multiple
-                            #else:
-                            #    orbital_data[label] = workchain.outputs.output_data
                         else:
                             self.report(f"{label} calculation failed")
                             failed = True
@@ -325,6 +483,25 @@ class PPWorkChain(WorkChain):
 
                 if not wfn_found:
                     self.report(f"No workchains found for 'calc_wfn' with labels starting with 'wfn_'")
+
+            elif prop == "calc_stm":
+                stm_found = False
+                stm_outputs = {}
+                for label, workchain in self.ctx.items():
+                    if label.startswith("stm_"):
+                        stm_found = True
+                        if workchain.is_finished_ok:
+                            stm_outputs[label] = {}
+                            process = getattr(self.ctx, label)
+                            for key in process.outputs._get_keys():
+                                stm_outputs[label][key] = getattr(process.outputs, key)
+                        else:
+                            self.report(f"{label} calculation failed")
+                            failed = True
+                self.out("stm", stm_outputs)
+
+                if not stm_found:
+                    self.report(f"No workchains found for 'calc_stm' with labels starting with 'stm_'")
 
 
         if failed:

@@ -2,6 +2,7 @@ from aiida.plugins import WorkflowFactory
 from aiida import orm
 PPWorkChain = WorkflowFactory("pp_app.pp")
 from aiidalab_widgets_base.utils import string_range_to_list
+from aiidalab_qe.plugins.utils import set_component_resources
 
 def condense_integer_list(lst):
     ranges = []
@@ -56,13 +57,17 @@ def parse_list_of_tuples(input_list, lsda, number_of_k_points):
     
     return result_list
 
+
+def update_resources(builder, codes):
+    set_component_resources(builder.pp_calc, codes.get("pp"))
+
 def get_builder(codes, structure, parameters):
 
 
     from copy import deepcopy
 
-    pp_code = codes.pop("pp")["code"]
-
+    pp_code = codes.get("pp")["code"]
+    critic2_code = codes.get("critic2")["code"]
 
     # Filter the dictionary to include only keys that start with 'calc_'
     calc_parameters = {key: value for key, value in parameters["pp"].items() if key.startswith("calc_")}
@@ -86,7 +91,7 @@ def get_builder(codes, structure, parameters):
     pp_parameters = {
         "charge_dens": { "spin_component" : parameters["pp"]["charge_dens_options"]} , 
         "ildos": { "emin" : parameters["pp"]["ildos_emin"], "emax" : parameters["pp"]["ildos_emax"] , "ildos_spin_component" : parameters["pp"]["ildos_spin_component"]},
-        "stm": { "sample_bias" : parameters["pp"]["stm_sample_bias"]},
+        "stm": { "sample_bias" : parameters["pp"]["stm_sample_bias"] , "heights": parameters["pp"]["stm_heights"] , "currents" : parameters["pp"]["stm_currents"]},
         "wfn": { "orbitals" : parse_list_of_tuples(parameters["pp"]["sel_orbital"], lsda, number_of_k_points) , "lsda" : lsda , "number_of_k_points" : number_of_k_points}, 
 
 
@@ -96,11 +101,13 @@ def get_builder(codes, structure, parameters):
     builder = PPWorkChain.get_builder_from_protocol(
         parent_folder=remote_folder,
         pp_code = pp_code,
+        critic2_code = critic2_code,
         parameters=parameters,
         properties=properties,
         structure=structure,
     )
 
+    update_resources(builder, codes)
 
     return builder
 

@@ -20,10 +20,14 @@ pp_code = QEAppComputationalResourcesWidget(
     default_calc_job_plugin="quantumespresso.pp",
 )
 
+critic2_code = QEAppComputationalResourcesWidget(
+    description="critic2",
+    default_calc_job_plugin="critic2",
+)
 
 pp = {
     "outline": PpOutline,
-    "code": {"pp": pp_code},
+    "code": {"pp": pp_code, "critic2": critic2_code},
     "setting": Setting,
     "workchain": workchain_and_builder,
     "result": Result,
