@@ -9,6 +9,20 @@ To install the `aiidalab-qe-pp` plugin, follow these steps:
     cd aiidalab-qe-pp
     pip install -e .
 
+## Critic2 Integration
+
+This plugin utilizes [Critic2](https://aoterodelaroza.github.io/critic2/) software to compute Scanning Tunneling Microscopy (STM) images from Quantum ESPRESSO output data.
+For more information on Critic2 and its capabilities, please visit the [official Critic2 website](https://aoterodelaroza.github.io/critic2/).
+
+## Critic2 AiiDAlab Installation
+
+For installing Critic2 in your AiiDAlab please ensure you have gfortran and cmake
+
+    ```bash
+    mamba install gfortran
+    mamba install cmake
+
+Then follow the instructions for Critic2 installation [Critic2 Installation](https://aoterodelaroza.github.io/critic2/installation/)
 
 ## License
 The `aiidalab-qe-pp` plugin package is released under the MIT license.
