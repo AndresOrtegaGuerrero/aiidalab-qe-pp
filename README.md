@@ -1,5 +1,5 @@
 # aiidalab-qe-pp
-Plugin to perform data analysis and plotting using the pp.x code
+Plugin to perform data analysis and plotting using the pp.x code for the  [AiiDAlab Quantum ESPRESSO application](https://github.com/aiidalab/aiidalab-qe)
 
 ## Installation
 To install the `aiidalab-qe-pp` plugin, follow these steps:
