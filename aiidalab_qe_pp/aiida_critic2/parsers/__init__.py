@@ -5,13 +5,14 @@ from aiida.plugins import CalculationFactory
 from aiida.orm import ArrayData
 import numpy as np
 
-Critic2Calculation = CalculationFactory('critic2')
+Critic2Calculation = CalculationFactory("critic2")
+
 
 class Critic2Parser(Parser):
     """
     Parser class for parsing output of critic2.
     """
-    
+
     def parse(self, **kwargs):
         """Parse the retrieved files from a critic2 calculation."""
 
@@ -21,7 +22,7 @@ class Critic2Parser(Parser):
             self.logger.error("No retrieved folder found")
             return self.exit_codes.ERROR_NO_RETRIEVED_FOLDER
 
-        list_of_files = (out_folder.base.repository.list_object_names())
+        list_of_files = out_folder.base.repository.list_object_names()
 
         data_file = self.node.process_class._FILEOUT
         output_file = self.node.process_class._DEFAULT_OUTPUT_FILE
@@ -41,7 +42,6 @@ class Critic2Parser(Parser):
 
         xcryst, ycryst, xcart, ycart, fstm = read_stm_file(out_folder, data_file)
 
-
         stm_data = ArrayData()
         stm_data.set_array("xcryst", np.array(xcryst))
         stm_data.set_array("ycryst", np.array(ycryst))
@@ -50,18 +50,11 @@ class Critic2Parser(Parser):
         stm_data.set_array("fstm", np.array(fstm))
         self.out("stm_data", stm_data)
 
+        return ExitCode(0)
 
         return ExitCode(0)
-        
-            
 
 
-        return ExitCode(0)
-        
-
-        
-        
-        
 def read_stm_file(out_folder, data_file):
     xcryst = []
     ycryst = []
@@ -74,7 +67,7 @@ def read_stm_file(out_folder, data_file):
             # Skip lines that start with ##
             if line.startswith("##"):
                 continue
-            
+
             # Split the line into columns and convert to float
             columns = line.split()
             if len(columns) == 5:

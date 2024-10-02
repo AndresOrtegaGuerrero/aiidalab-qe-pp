@@ -23,6 +23,11 @@ setup(
     install_requires=[
         "weas-widget",
     ],
+    extras_require={
+        "dev": [
+            "ruff",
+        ],
+    },
     entry_points={
         "aiida.calculations": [
             "critic2 = aiidalab_qe_pp.aiida_critic2.calculations:Critic2Calculation",
@@ -39,5 +44,5 @@ setup(
     },
     package_data={},
     python_requires=">=3.9",
-    #test_suite="setup.test_suite",
+    # test_suite="setup.test_suite",
 )
