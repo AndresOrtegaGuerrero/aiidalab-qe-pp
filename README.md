@@ -4,11 +4,11 @@ Plugin to perform data analysis and plotting using the pp.x code
 ## Installation
 To install the `aiidalab-qe-pp` plugin, follow these steps:
 
-    ```bash
-    git clone https://github.com/AndresOrtegaGuerrero/aiidalab-qe-pp.git
-    cd aiidalab-qe-pp
-    pip install -e .
-    ```
+```shell
+git clone https://github.com/AndresOrtegaGuerrero/aiidalab-qe-pp.git
+cd aiidalab-qe-pp
+pip install -e .
+```
 
 ## Critic2 Integration
 
@@ -19,31 +19,31 @@ For more information on Critic2 and its capabilities, please visit the [official
 
 For installing Critic2 in your AiiDAlab please ensure you have gfortran and cmake
 
-    ```bash
-    mamba install gfortran
-    mamba install cmake
-    ```
+```shell
+mamba install gfortran
+mamba install cmake
+```
 
-Then follow the instructions for Critic2 installation [Critic2 Installation](https://aoterodelaroza.github.io/critic2/installation/)
+Then follow the instructions for [Critic2 Installation](https://aoterodelaroza.github.io/critic2/installation/)
 
 Onced installed critic2
 
-    ```bash
-    verdi code create core.code.installed --config code.yml
-    ```
+```bash
+verdi code create core.code.installed --config code.yml
+```
 where code.yml for your localhost within AiiDAlab can be
 
-    ```bash
-    ---
-    label: 'critic2'
-    description: 'Critic 2 at localhost'
-    default_calc_job_plugin: 'critic2'
-    filepath_executable: '/home/jovyan/critic2/build/src/critic2'
-    computer: 'localhost'
-    prepend_text: |
+```bash
+---
+label: 'critic2'
+description: 'Critic 2 at localhost'
+default_calc_job_plugin: 'critic2'
+filepath_executable: '/home/jovyan/critic2/build/src/critic2'
+computer: 'localhost'
+prepend_text: |
 
-    append_text: ' '
-    ```
+append_text: ' '
+```
 
 ## License
 The `aiidalab-qe-pp` plugin package is released under the MIT license.
