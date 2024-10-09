@@ -13,6 +13,9 @@ from scipy.interpolate import griddata
 import plotly.graph_objects as go
 from paramiko.ssh_exception import SSHException
 
+from aiidalab_qe.plugins.bands.bands_workchain import BandsWorkChain
+from aiida_wannier90_workflows.workflows import ProjwfcBandsWorkChain
+
 # Cube Visual Widget
 from weas_widget import WeasWidget
 from IPython.display import Javascript
@@ -241,11 +244,19 @@ class PwCalcListWidget(ipw.VBox):
                     orm.StructureData, filters={"id": structure.pk}, tag="structure"
                 )
                 .append(
-                    PwBandsWorkChain,
+                    BandsWorkChain,
                     filters={
                         "attributes.exit_status": 0,
                     },
                     with_incoming="structure",
+                    tag="bands_wc_qe",
+                )
+                .append(
+                    (PwBandsWorkChain, ProjwfcBandsWorkChain),
+                    filters={
+                        "attributes.exit_status": 0,
+                    },
+                    with_incoming="bands_wc_qe",
                     tag="bands_wc",
                 )
                 .append(

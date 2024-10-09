@@ -21,7 +21,7 @@ setup(
     classifiers=[],
     packages=find_packages(),
     install_requires=[
-        "weas-widget",
+        "weas-widget==0.1.4",
     ],
     extras_require={
         "dev": [
