@@ -274,16 +274,6 @@ class PPWorkChain(WorkChain):
         builder.parent_folder = parent_folder
         builder.properties = properties
         builder.pp_calc.code = pp_code
-
-        # builder.pp_calc.metadata.options = {
-        #     "resources": {
-        #         "num_machines": 1,
-        #         "num_mpiprocs_per_machine": 1,
-        #     },
-        #     "max_wallclock_seconds": 10800,
-        #     "withmpi": False,
-        # }
-
         builder.critic2_calc.code = critic2_code
 
         builder.critic2_calc.metadata.options = {
