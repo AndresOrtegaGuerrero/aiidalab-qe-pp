@@ -520,6 +520,8 @@ class CubeVisualWidget(ipw.VBox):
         isovalue = 2 * np.std(self.cube_data) + np.mean(self.cube_data)
         viewer.avr.iso.volumetric_data = {"values": self.cube_data}
         viewer.avr.iso.settings = [{"isovalue": isovalue, "mode": 0}]
+        viewer.avr.color_type = "JMOL"
+        viewer.avr.model_style = 1
         return viewer
 
     def _display(self, _=None):
