@@ -528,7 +528,7 @@ class CubeVisualWidget(ipw.VBox):
         viewer.from_ase(self.structure.get_ase())
         isovalue = 2 * np.std(self.cube_data) + np.mean(self.cube_data)
         viewer.avr.iso.volumetric_data = {"values": self.cube_data}
-        viewer.avr.iso.settings = [{"isovalue": isovalue, "mode": 0}]
+        viewer.avr.iso.settings = {"isovalue": isovalue, "mode": 0}
         viewer.avr.color_type = "JMOL"
         viewer.avr.model_style = 1
         return viewer
@@ -695,7 +695,7 @@ class WfnVisualWidget(CubeVisualWidget):
         self.cube_data = self.cube_data_dict.get(key).get_array("data")
         isovalue = 2 * np.std(self.cube_data) + np.mean(self.cube_data)
         self.viewer.avr.iso.volumetric_data = {"values": self.cube_data}
-        self.viewer.avr.iso.settings = [{"isovalue": isovalue, "mode": 0}]
+        self.viewer.avr.iso.settings = {"isovalue": isovalue, "mode": 0}
 
     def download_cube(self, _=None):
         """Download the cube file with the current kpoint and band in the filename."""
