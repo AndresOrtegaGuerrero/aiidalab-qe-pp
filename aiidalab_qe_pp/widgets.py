@@ -16,6 +16,9 @@ from paramiko.ssh_exception import SSHException
 from aiidalab_qe.plugins.bands.bands_workchain import BandsWorkChain
 from aiida_wannier90_workflows.workflows import ProjwfcBandsWorkChain
 
+
+from aiida.common.exceptions import NotExistent
+
 # Cube Visual Widget
 from weas_widget import WeasWidget
 from IPython.display import Javascript
@@ -335,6 +338,10 @@ class PwCalcListWidget(ipw.VBox):
                 continue
             # Fix this in future
             except SSHException:
+                continue
+            except NotExistent:
+            # Skip calculations without necessary info
+                print(f"Skipping calculation {calc.pk} due to missing remote folder or auth info.")
                 continue
 
         return avail_list
