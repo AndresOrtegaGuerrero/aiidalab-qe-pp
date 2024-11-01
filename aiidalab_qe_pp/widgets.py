@@ -340,8 +340,10 @@ class PwCalcListWidget(ipw.VBox):
             except SSHException:
                 continue
             except NotExistent:
-            # Skip calculations without necessary info
-                print(f"Skipping calculation {calc.pk} due to missing remote folder or auth info.")
+                # Skip calculations without necessary info
+                print(
+                    f"Skipping calculation {calc.pk} due to missing remote folder or auth info."
+                )
                 continue
 
         return avail_list
