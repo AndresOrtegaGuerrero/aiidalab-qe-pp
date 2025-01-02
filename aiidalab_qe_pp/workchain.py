@@ -1,7 +1,7 @@
 from aiida.plugins import WorkflowFactory
 from aiida import orm
 from aiidalab_widgets_base.utils import string_range_to_list
-from aiidalab_qe.plugins.utils import set_component_resources
+from aiidalab_qe.utils import set_component_resources
 
 
 PPWorkChain = WorkflowFactory("pp_app.pp")
