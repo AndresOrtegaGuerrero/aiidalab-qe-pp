@@ -2,21 +2,19 @@ import aiidalab_widgets_base as awb
 import ipywidgets as ipw
 import traitlets as tl
 import numpy as np
-from aiida import orm
 
 
-from aiida_quantumespresso.workflows.pw.bands import PwBandsWorkChain
-from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
-from aiida_quantumespresso.calculations.pw import PwCalculation
 from IPython.display import HTML, clear_output, display
 from scipy.interpolate import griddata
 import plotly.graph_objects as go
-from paramiko.ssh_exception import SSHException
 
+from aiida import orm
+from aiida_quantumespresso.workflows.pw.bands import PwBandsWorkChain
+from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
+from aiida_quantumespresso.calculations.pw import PwCalculation
+from paramiko.ssh_exception import SSHException
 from aiidalab_qe.plugins.bands.bands_workchain import BandsWorkChain
 from aiida_wannier90_workflows.workflows import ProjwfcBandsWorkChain
-
-
 from aiida.common.exceptions import NotExistent
 
 # Cube Visual Widget
@@ -395,7 +393,7 @@ class PwCalcListWidget(ipw.VBox):
 
     def set_options_pwcalc_avail(self, pk):
         calc = orm.load_node(pk)
-        description = "PK: {} LSDA = {} SOC = {} Computer = {} ".format(
+        description = "PK: {} LSDA: {} SOC {} Computer = {} ".format(
             calc.pk,
             calc.outputs.output_parameters["lsda"],
             calc.outputs.output_parameters["spin_orbit_calculation"],

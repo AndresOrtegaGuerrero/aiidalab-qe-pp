@@ -33,19 +33,32 @@ class PpConfigurationSettingPanel(
         if self.rendered:
             return
 
-        self._default_pwcalc_list_helper_text = """<div style="line-height: 140%; padding-top: 0px; padding-bottom: 10px; color: red;">
-            Input structure is not set. Please set the structure first.
-            </div>"""
-
         self.pwcalc_description = ipw.HTML(
-            """<div style="line-height: 140%; padding-top: 0px; padding-bottom: 10px">
-            Please choose the wavefunction source: either from a previous Bands or Nscf calculation linked
-            to your structure.
-            <h5>Be careful with the clean-up the work directory option in the Advanced Settings.</h5>
-            </div>""",
+            """
+            <div style="line-height: 1.4; padding-bottom: 10px;">
+                To run post-processing calculations, select a previous calculation (Band structure or Electronic projected density of states) where the chosen structure was used as input.
+                The widget below lists all available calculations for the selected structure.
+                Choose the type of calculation (Bands or NSCF) and then select the specific calculation you want to use.
+
+                <h5>Note:</h5>
+                <p>Be cautious with the "Delete work directory" option in Advanced Settings, as it will remove the associated files permanently.</p>
+            </div>
+            """,
             layout=ipw.Layout(max_width="100%"),
         )
 
+        self.comp_description = ipw.HTML(
+            """
+            <div style="line-height: 1.4; padding-bottom: 10px;">
+                <h5>Note:</h5>
+                <p>When selecting a PwCalculation, ensure you choose the same computer in Step 3.0 (Computational resources).
+                The required files for post-processing calculations are stored on that computer.</p>
+            </div>
+            """,
+            layout=ipw.Layout(max_width="100%"),
+        )
+
+        # Structured selected HTML
         self.structure_selected = ipw.HTML()
         ipw.link(
             (self._model, "structure_selected"),
@@ -56,29 +69,118 @@ class PpConfigurationSettingPanel(
             <h5>Please select the different calculations options:</h5>
             </div>"""
         )
+
+        # STM help
+        self.calc_stm_help = ipw.HTML(
+            """<div style="line-height: 140%; padding-top: 0px; padding-bottom: 5px">
+            Write the list of parameters (Bias , Heights and Currents) to compute separated by a space. For example: 0.0 0.1 0.2
+            </div>"""
+        )
+
+        # PwCalcList Widget
+
+        # PwCalculation Type
+        self.pwcalc_type = ipw.Dropdown(
+            description="Select the pw.x type to use:",
+            disabled=False,
+            style={"description_width": "initial"},
+        )
+        ipw.dlink(
+            (self._model, "pwcalc_type_options"),
+            (self.pwcalc_type, "options"),
+        )
+        ipw.link(
+            (self._model, "pwcalc_type"),
+            (self.pwcalc_type, "value"),
+        )
+        self.pwcalc_type.observe(
+            self._model.update_pwcalc_avail_options,
+            "value",
+        )
+        # PwCalculation Available
+        self.pwcalc_avail = ipw.Dropdown(
+            description="PwCalculation available:",
+            style={"description_width": "initial"},
+            layout={"width": "800px", "display": "block"},
+        )
+        ipw.dlink(
+            (self._model, "pwcalc_avail_options"),
+            (self.pwcalc_avail, "options"),
+        )
+        ipw.link(
+            (self._model, "pwcalc_avail"),
+            (self.pwcalc_avail, "value"),
+        )
+        ipw.link(
+            (self._model, "pwcalc_avail_displayed"),
+            (self.pwcalc_avail.layout, "display"),
+        )
+        self.pwcalc_avail.observe(
+            self._model.on_pwcalc_avail_change,
+            "value",
+        )
+
+        # No available calculations HTML
+        self.no_avail_cals = ipw.HTML()
+        ipw.link(
+            (self._model, "no_avail_cals"),
+            (self.no_avail_cals, "value"),
+        )
+
         # Calculation options
+
+        # Charge Density Calculation
         self.calc_charge_dens = ipw.Checkbox(
             description="Charge Density", layout={"width": "initial"}
         )
         ipw.link((self._model, "calc_charge_dens"), (self.calc_charge_dens, "value"))
+        ipw.link(
+            (self._model, "disable_calc_charge_dens"),
+            (self.calc_charge_dens, "disabled"),
+        )
+        self.calc_charge_dens.observe(
+            self._on_change_calc_charge_dens,
+            "value",
+        )
 
+        # Spin Density Calculation
         self.calc_spin_dens = ipw.Checkbox(
             description="Spin Density", layout={"width": "initial"}
         )
         ipw.link((self._model, "calc_spin_dens"), (self.calc_spin_dens, "value"))
+        ipw.link(
+            (self._model, "disable_calc_spin_dens"), (self.calc_spin_dens, "disabled")
+        )
+
+        # Kohn Sham Orbitals Calculation
         self.calc_wfn = ipw.Checkbox(
             description="Kohn Sham Orbitals", layout={"width": "initial"}
         )
         ipw.link((self._model, "calc_wfn"), (self.calc_wfn, "value"))
+        ipw.link((self._model, "disable_calc_wfn"), (self.calc_wfn, "disabled"))
+
+        # Integrated Local Density of States Calculation
         self.calc_ildos = ipw.Checkbox(
             description="Integrated Local Density of States",
             layout={"width": "initial"},
         )
         ipw.link((self._model, "calc_ildos"), (self.calc_ildos, "value"))
+        ipw.link((self._model, "disable_calc_ildos"), (self.calc_ildos, "disabled"))
+        self.calc_ildos.observe(
+            self._on_change_calc_ildos,
+            "value",
+        )
+
+        # STM Plots Calculation
         self.calc_stm = ipw.Checkbox(
             description="STM Plots", layout={"width": "initial"}
         )
         ipw.link((self._model, "calc_stm"), (self.calc_stm, "value"))
+        ipw.link((self._model, "disable_calc_stm"), (self.calc_stm, "disabled"))
+        self.calc_stm.observe(
+            self._on_change_calc_stm,
+            "value",
+        )
 
         # Calc Charge Density Options
         self.charge_dens_options = ipw.Dropdown(
@@ -92,6 +194,10 @@ class PpConfigurationSettingPanel(
         ipw.link(
             (self._model, "charge_dens"),
             (self.charge_dens_options, "value"),
+        )
+        ipw.link(
+            (self._model, "charge_dens_options_displayed"),
+            (self.charge_dens_options.layout, "display"),
         )
 
         # Calc ILDOS Options
@@ -119,6 +225,18 @@ class PpConfigurationSettingPanel(
             (self._model, "ilods_spin_component"),
             (self.ildos_spin_component, "value"),
         )
+        ipw.link(
+            (self._model, "ildos_spin_component_options_displayed"),
+            (self.ildos_spin_component.layout, "display"),
+        )
+
+        self.ildos_parameters = ipw.HBox(
+            [self.ildos_emin, self.ildos_emax, self.ildos_spin_component]
+        )
+        ipw.link(
+            (self._model, "ildos_options_displayed"),
+            (self.ildos_parameters.layout, "display"),
+        )
 
         # Calc STM Options
         self.stm_sample_bias = ipw.Text(
@@ -140,29 +258,69 @@ class PpConfigurationSettingPanel(
             placeholder="arbitrary units",
         )
         ipw.link((self._model, "stm_currents"), (self.stm_currents, "value"))
-        self.stm_parameters = ipw.HBox(
-            [self.stm_sample_bias, self.stm_heights, self.stm_currents]
+        self.stm_parameters = ipw.VBox(
+            [
+                self.calc_stm_help,
+                ipw.HBox(
+                    [
+                        self.stm_sample_bias,
+                        self.stm_heights,
+                        self.stm_currents,
+                    ]
+                ),
+            ]
+        )
+
+        ipw.link(
+            (self._model, "stm_options_displayed"),
+            (self.stm_parameters.layout, "display"),
         )
 
         self.children = [
             self.structure_selected,
             self.pwcalc_description,
+            self.comp_description,
+            self.pwcalc_type,
+            self.no_avail_cals,
+            self.pwcalc_avail,
             self.calc_options_help,
             self.calc_charge_dens,
             self.charge_dens_options,
             self.calc_spin_dens,
             self.calc_wfn,
             self.calc_ildos,
-            self.ildos_emin,
-            self.ildos_emax,
-            self.ildos_spin_component,
+            self.ildos_parameters,
             self.calc_stm,
             self.stm_parameters,
         ]
+        self.rendered = True
+        self._initial_view()
+
+    def _initial_view(self):
+        self._get_data()
+        self._model.update_pwcalc_avail_options()
 
     def _on_input_structure_change(self, _):
         self.refresh(specific="structure")
         self._model.on_input_structure_change()
+
+    def _get_data(self):
+        self._model.fetch_data()
+
+    def _update_pwcalc_avail_options(self, _):
+        self._model.update_pwcalc_avail_options()
+
+    def _on_pwcalc_avail_change(self, _):
+        self._model.on_pwcalc_avail_change()
+
+    def _on_change_calc_charge_dens(self, _):
+        self._model.on_change_calc_charge_dens()
+
+    def _on_change_calc_stm(self, _):
+        self._model.on_change_calc_stm()
+
+    def _on_change_calc_ildos(self, _):
+        self._model.on_change_calc_ildos()
 
 
 # class Setting(Panel):
@@ -181,11 +339,6 @@ class PpConfigurationSettingPanel(
 #         self.calc_options_help = ipw.HTML(
 #             """<div style="line-height: 140%; padding-top: 0px; padding-bottom: 5px">
 #             <h5>Please select the different calculations options:</h5>
-#             </div>"""
-#         )
-#         self.calc_stm_help = ipw.HTML(
-#             """<div style="line-height: 140%; padding-top: 0px; padding-bottom: 5px">
-#             Write the list of parameters (Bias , Heights and Currents) to compute separated by a space. For example: 0.0 0.1 0.2
 #             </div>"""
 #         )
 #         # PwCalcList Widget
