@@ -71,7 +71,7 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
         trait=tl.List(tl.Union([tl.Unicode(), tl.Int()])),
         default_value=[("Up + Down", 0), ("Up", 1), ("Down", 2)],
     )
-    ilods_spin_component = tl.Float(0)
+    ildos_spin_component = tl.Float(0)
 
     stm_sample_bias = tl.Unicode("0.0")
     stm_heights = tl.Unicode("2.0")
@@ -85,6 +85,11 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
 
     kbands_info = tl.Unicode("")
     kpoints_table = tl.Unicode("")
+
+    sel_orbital = tl.List(
+        trait=tl.List(tl.Union([tl.Unicode(), tl.Int()])),
+        default_value=[],
+    )
 
     def fetch_data(self):
         self.bands_calc_list = self.get_available_pwcalcs(self.input_structure, "bands")
@@ -335,3 +340,22 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
                 continue
 
         return avail_list
+
+    def get_model_state(self):
+        return {
+            "current_calc_lsda": self.current_calc_lsda,
+            "pwcalc_avail": self.pwcalc_avail,
+            "calc_charge_dens": self.calc_charge_dens,
+            "calc_spin_dens": self.calc_spin_dens,
+            "calc_wfn": self.calc_wfn,
+            "calc_ildos": self.calc_ildos,
+            "calc_stm": self.calc_stm,
+            "charge_dens": self.charge_dens,
+            "ildos_emin": self.ildos_emin,
+            "ildos_emax": self.ildos_emax,
+            "ildos_spin_component": self.ildos_spin_component,
+            "stm_sample_bias": self.stm_sample_bias,
+            "stm_heights": self.stm_heights,
+            "stm_currents": self.stm_currents,
+            "sel_orbital": self.sel_orbital,
+        }

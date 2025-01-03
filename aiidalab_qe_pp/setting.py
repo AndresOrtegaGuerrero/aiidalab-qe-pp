@@ -229,6 +229,10 @@ class PpConfigurationSettingPanel(
         self.sel_orbital = OrbitalListWidget(
             item_class=OrbitalSelectionWidget, add_button_text="Add Orbital"
         )
+        ipw.link(
+            (self._model, "sel_orbital"),
+            (self.sel_orbital, "orbitals"),
+        )
 
         self.wfn_options = ipw.VBox(
             [self.kbands_info, self.kpoints_table_box, self.sel_orbital]
@@ -261,7 +265,7 @@ class PpConfigurationSettingPanel(
             (self.ildos_spin_component, "options"),
         )
         ipw.link(
-            (self._model, "ilods_spin_component"),
+            (self._model, "ildos_spin_component"),
             (self.ildos_spin_component, "value"),
         )
         ipw.link(

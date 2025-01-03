@@ -88,17 +88,14 @@ def get_builder(codes, structure, parameters):
     remote_folder = aiida_node.outputs.remote_folder
 
     # Orbitals
-    lsda = parameters["pp"]["lsda"]
+    lsda = parameters["pp"]["current_calc_lsda"]
     number_of_k_points = aiida_node.outputs.output_parameters.get_dict()[
         "number_of_k_points"
     ]
 
-    # StructureData Used
-    pk = parameters["pp"]["structure_pk"]
-    structure = orm.load_node(pk)
     # Parameters
     pp_parameters = {
-        "charge_dens": {"spin_component": parameters["pp"]["charge_dens_options"]},
+        "charge_dens": {"spin_component": parameters["pp"]["charge_dens"]},
         "ildos": {
             "emin": parameters["pp"]["ildos_emin"],
             "emax": parameters["pp"]["ildos_emax"],

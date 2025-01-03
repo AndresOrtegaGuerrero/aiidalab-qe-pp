@@ -117,23 +117,28 @@ class OrbitalSelectionWidget(HorizontalItemWidget):
         super().__init__(children=[self.kbands, self.kpoint])
 
 
-class OrbitalListWidget(VerticalStackWidget):
+class OrbitalListWidget(VerticalStackWidget, tl.HasTraits):
+    orbitals = tl.List([])
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.observe(self._update_orbitals, names="items")
+
     def add_item(self, _):
         self.items += (self.item_class(),)
 
-    def reset(
-        self,
-    ):
+    def reset(self):
         self.items = []
+        self._update_orbitals()
 
     # Set the max value of the self.kpoint widget in the OrbitalSelectionWidget
     def set_max_kpoint(self, max_kpoint):
         for item in self.items:
             item.kpoint.max = max_kpoint
 
-    @property
-    def orbitals(self):
-        return [(item.kbands.value, item.kpoint.value) for item in self.items]
+    def _update_orbitals(self, *_):
+        """Update the orbitals trait when items change."""
+        self.orbitals = [(item.kbands.value, item.kpoint.value) for item in self.items]
 
 
 class PwCalcListWidget(ipw.VBox):

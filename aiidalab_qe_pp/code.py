@@ -8,6 +8,7 @@ from aiidalab_qe.common.panel import (
 class PpResourceSettingsModel(PluginResourceSettingsModel):
     """Resource settings for the pp calculations."""
 
+    title = "Post-processing"
     identifier = "pp"
 
     def __init__(self, **kwargs):
