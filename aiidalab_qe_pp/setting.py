@@ -6,7 +6,7 @@ import ipywidgets as ipw
 
 from aiidalab_qe.common.panel import ConfigurationSettingsPanel
 from .model import PpConfigurationSettingsModel
-
+from .widgets import OrbitalListWidget, OrbitalSelectionWidget
 
 # import traitlets as tl
 # from aiidalab_qe.common.panel import Panel
@@ -159,6 +159,11 @@ class PpConfigurationSettingPanel(
         ipw.link((self._model, "calc_wfn"), (self.calc_wfn, "value"))
         ipw.link((self._model, "disable_calc_wfn"), (self.calc_wfn, "disabled"))
 
+        self.calc_wfn.observe(
+            self._on_change_calc_wfn,
+            "value",
+        )
+
         # Integrated Local Density of States Calculation
         self.calc_ildos = ipw.Checkbox(
             description="Integrated Local Density of States",
@@ -198,6 +203,40 @@ class PpConfigurationSettingPanel(
         ipw.link(
             (self._model, "charge_dens_options_displayed"),
             (self.charge_dens_options.layout, "display"),
+        )
+
+        # Calc Kohn Sham Orbitals Options
+
+        self.kbands_info = ipw.HTML()
+        ipw.link(
+            (self._model, "kbands_info"),
+            (self.kbands_info, "value"),
+        )
+        self.kpoints_table = ipw.HTML()
+        ipw.link(
+            (self._model, "kpoints_table"),
+            (self.kpoints_table, "value"),
+        )
+        self.kpoints_table_box = ipw.Box(
+            children=[self.kpoints_table],
+            layout=ipw.Layout(
+                overflow="auto",
+                height="300px",
+                width="300px",
+            ),
+        )
+
+        self.sel_orbital = OrbitalListWidget(
+            item_class=OrbitalSelectionWidget, add_button_text="Add Orbital"
+        )
+
+        self.wfn_options = ipw.VBox(
+            [self.kbands_info, self.kpoints_table_box, self.sel_orbital]
+        )
+
+        ipw.link(
+            (self._model, "wfn_options_displayed"),
+            (self.wfn_options.layout, "display"),
         )
 
         # Calc ILDOS Options
@@ -288,6 +327,7 @@ class PpConfigurationSettingPanel(
             self.charge_dens_options,
             self.calc_spin_dens,
             self.calc_wfn,
+            self.wfn_options,
             self.calc_ildos,
             self.ildos_parameters,
             self.calc_stm,
@@ -321,6 +361,9 @@ class PpConfigurationSettingPanel(
 
     def _on_change_calc_ildos(self, _):
         self._model.on_change_calc_ildos()
+
+    def _on_change_calc_wfn(self, _):
+        self._model.on_change_calc_wfn()
 
 
 # class Setting(Panel):

@@ -10,6 +10,7 @@ from aiidalab_qe.plugins.bands.bands_workchain import BandsWorkChain
 from aiida_wannier90_workflows.workflows import ProjwfcBandsWorkChain
 from aiida_quantumespresso.data.hubbard_structure import HubbardStructureData
 from aiida.common.exceptions import NotExistent
+import numpy as np
 
 
 class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure):
@@ -61,6 +62,7 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
     ildos_options_displayed = tl.Unicode("none")
     ildos_spin_component_options_displayed = tl.Unicode("none")
     pwcalc_avail_displayed = tl.Unicode("block")
+    wfn_options_displayed = tl.Unicode("none")
 
     ildos_emin = tl.Float(0)
     ildos_emax = tl.Float(0)
@@ -80,6 +82,9 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
 
     current_calc_lsda = tl.Bool(False)
     current_calc_soc = tl.Bool(False)
+
+    kbands_info = tl.Unicode("")
+    kpoints_table = tl.Unicode("")
 
     def fetch_data(self):
         self.bands_calc_list = self.get_available_pwcalcs(self.input_structure, "bands")
@@ -124,6 +129,14 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
         calc = orm.load_node(self.pwcalc_avail)
         self.current_calc_lsda = calc.outputs.output_parameters["lsda"]
         self.current_calc_soc = calc.outputs.output_parameters["spin_orbit_calculation"]
+
+        number_of_electrons = calc.outputs.output_parameters["number_of_electrons"]
+        number_of_bands = calc.outputs.output_parameters["number_of_bands"]
+        self.kbands_info = f"<strong>Number of electrons:</strong> {number_of_electrons}<br> <strong>Number of bands:</strong>  {number_of_bands}"
+
+        kpoints = calc.outputs.output_band.get_kpoints()
+        self.kpoints_table = self.update_kpoints_info(kpoints)
+
         self.enable_all_calcs()
         if self.current_calc_lsda:
             self.calc_spin_dens = False
@@ -164,6 +177,12 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
         else:
             self.stm_options_displayed = "none"
 
+    def on_change_calc_wfn(self, _=None):
+        if self.calc_wfn:
+            self.wfn_options_displayed = "block"
+        else:
+            self.wfn_options_displayed = "none"
+
     def on_change_calc_ildos(self, _=None):
         if self.calc_ildos:
             self.ildos_options_displayed = "block"
@@ -187,6 +206,24 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
         self.disable_calc_wfn = False
         self.disable_calc_ildos = False
         self.disable_calc_stm = False
+
+    def update_kpoints_info(self, list_kpoints):
+        """Update table with the kpoints. Number - (kx,ky,kz).  list_kpoints"""
+        rounded_kpoints = np.round(list_kpoints, 4).tolist()
+        table_data = [
+            (index + 1, kpoint) for index, kpoint in enumerate(rounded_kpoints)
+        ]
+        table_html = "<table>"
+        table_html += "<tr><th style='text-align:center; width: 100px;'>Kpoint</th><th style='text-align:center;'>Crystal</th></tr>"
+        table_html += "<tr><th style='text-align:center; width: 100px;'>Index</th><th style='text-align:center;'>coord</th></tr>"
+        for row in table_data:
+            table_html += "<tr>"
+            for cell in row:
+                table_html += "<td style='text-align:center;'>{}</td>".format(cell)
+            table_html += "</tr>"
+        table_html += "</table>"
+
+        return table_html
 
     def get_available_pwcalcs(self, structure, wc_type):
         avail_list = []
