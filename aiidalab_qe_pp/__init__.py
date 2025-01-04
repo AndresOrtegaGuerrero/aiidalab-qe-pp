@@ -25,7 +25,7 @@ pp = {
         "panel": PpResourceSettingsPanel,
         "model": PpResourceSettingsModel,
     },
-    "results": {
+    "result": {
         "panel": PpResultsPanel,
         "model": PpResultsModel,
     },

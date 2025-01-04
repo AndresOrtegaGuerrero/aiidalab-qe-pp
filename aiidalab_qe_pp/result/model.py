@@ -3,7 +3,7 @@ import traitlets as tl
 
 
 class PpResultsModel(ResultsModel):
-    title = "Pp Results"
+    title = "Post-processing"
     identifier = "pp"
 
     _this_process_label = "PPWorkChain"

@@ -4,9 +4,12 @@ from aiidalab_qe.common.panel import ResultsPanel
 from aiidalab_qe_pp.result.model import PpResultsModel
 import ipywidgets as ipw
 
+from aiidalab_qe_pp.result.widgets.cubevisualmodel import CubeVisualModel
+from aiidalab_qe_pp.result.widgets.cubevisualwidget import CubeVisualWidget
+
 
 class PpResultsPanel(ResultsPanel[PpResultsModel]):
-    title = "Pp Results"
+    title = "Post-processing"
     identifier = "pp"
     workchain_labels = ["pp"]
 
@@ -24,29 +27,50 @@ class PpResultsPanel(ResultsPanel[PpResultsModel]):
         )
 
         tab_data = []
-        # pp_node = self._model.get_pp_node()
+        pp_node = self._model.get_pp_node()
 
         needs_charge_dens = self._model.needs_charge_dens_tab()
 
         if needs_charge_dens:
-            tab_data.append(("charge_dens", "Charge Density", "viewer_charge_dens"))
+            node = self._model.fetch_child_process_node()
+            cube_data = pp_node.charge_dens.output_data.get_array("data")
+            plot_num = "charge_dens"
+            cube_visual_model = CubeVisualModel()
+            cube_visual_widget = CubeVisualWidget(
+                cube_visual_model, node, cube_data, plot_num
+            )
+            tab_data.append(("Charge density", cube_visual_widget))
 
         needs_spin_dens = self._model.needs_spin_dens_tab()
         if needs_spin_dens:
-            print("spin_dens")
-            tab_data.append(("spin_dens", "Spin Density", "viewer_spin_dens"))
+            node = self._model.fetch_child_process_node()
+            cube_data = pp_node.spin_dens.output_data.get_array("data")
+            plot_num = "spin_dens"
+            cube_visual_model = CubeVisualModel()
+            cube_visual_widget = CubeVisualWidget(
+                cube_visual_model, node, cube_data, plot_num
+            )
+
+            tab_data.append(("Spin density", cube_visual_widget))
 
         needs_wfn = self._model.needs_wfn_tab()
         if needs_wfn:
-            tab_data.append(("wfn", "Orbitals", "viewer_wfn"))
+            tab_data.append(("wfn", "Orbitals"))
 
         needs_ildos = self._model.needs_ildos_tab()
         if needs_ildos:
-            tab_data.append(("ildos", "ILDOS", "viewer_ildos"))
+            node = self._model.fetch_child_process_node()
+            cube_data = pp_node.ildos.output_data.get_array("data")
+            plot_num = "ildos"
+            cube_visual_model = CubeVisualModel()
+            cube_visual_widget = CubeVisualWidget(
+                cube_visual_model, node, cube_data, plot_num
+            )
+            tab_data.append(("ILDOS", cube_visual_widget))
 
         needs_stm = self._model.needs_stm_tab()
         if needs_stm:
-            tab_data.append(("stm", "STM", "viewer_stm"))
+            tab_data.append(("stm", "STM"))
 
         # Assign children and titles dynamically
         self.tabs.children = [content for _, content in tab_data]
@@ -57,7 +81,7 @@ class PpResultsPanel(ResultsPanel[PpResultsModel]):
         self.rendered = True
         self.tabs.selected_index = 0
 
-    # def _on_tab_change(self, change):
-    #     if (tab_index := change["new"]) is None:
-    #         return
-    #     self.tabs.children[tab_index].render()  # type: ignore
+    def _on_tab_change(self, change):
+        if (tab_index := change["new"]) is None:
+            return
+        self.tabs.children[tab_index].render()  # type: ignore
