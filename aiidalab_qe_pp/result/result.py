@@ -6,6 +6,8 @@ import ipywidgets as ipw
 
 from aiidalab_qe_pp.result.widgets.cubevisualmodel import CubeVisualModel
 from aiidalab_qe_pp.result.widgets.cubevisualwidget import CubeVisualWidget
+from aiidalab_qe_pp.result.widgets.stmvisualmodel import STMVisualModel
+from aiidalab_qe_pp.result.widgets.stmvisualwidget import STMVisualWidget
 
 
 class PpResultsPanel(ResultsPanel[PpResultsModel]):
@@ -70,7 +72,9 @@ class PpResultsPanel(ResultsPanel[PpResultsModel]):
 
         needs_stm = self._model.needs_stm_tab()
         if needs_stm:
-            tab_data.append(("stm", "STM"))
+            stm_visual_model = STMVisualModel()
+            stm_visual_widget = STMVisualWidget(stm_visual_model, pp_node)
+            tab_data.append(("STM", stm_visual_widget))
 
         # Assign children and titles dynamically
         self.tabs.children = [content for _, content in tab_data]

@@ -48,7 +48,7 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
     disable_calc_ildos = tl.Bool(False)
     disable_calc_stm = tl.Bool(False)
 
-    charge_dens = tl.Float(0)
+    charge_dens = tl.Int(0)
     charge_dens_options = tl.List(
         trait=tl.List(tl.Union([tl.Unicode(), tl.Int()])),
         default_value=[
@@ -71,7 +71,7 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
         trait=tl.List(tl.Union([tl.Unicode(), tl.Int()])),
         default_value=[("Up + Down", 0), ("Up", 1), ("Down", 2)],
     )
-    ildos_spin_component = tl.Float(0)
+    ildos_spin_component = tl.Int(0)
 
     stm_sample_bias = tl.Unicode("0.0")
     stm_heights = tl.Unicode("2.0")
