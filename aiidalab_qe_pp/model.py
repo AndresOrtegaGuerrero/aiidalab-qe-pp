@@ -359,3 +359,21 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
             "stm_currents": self.stm_currents,
             "sel_orbital": self.sel_orbital,
         }
+
+    def set_model_state(self, parameters: dict):
+        self.current_calc_lsda = parameters.get("current_calc_lsda", False)
+        self.pwcalc_avail = parameters.get("pwcalc_avail", None)
+        self.calc_charge_dens = parameters.get("calc_charge_dens", False)
+        self.calc_spin_dens = parameters.get("calc_spin_dens", False)
+        self.calc_wfn = parameters.get("calc_wfn", False)
+        self.calc_ildos = parameters.get("calc_ildos", False)
+        self.calc_stm = parameters.get("calc_stm", False)
+        self.charge_dens = parameters.get("charge_dens", 0)
+        self.ildos_emin = parameters.get("ildos_emin", 0)
+        self.ildos_emax = parameters.get("ildos_emax", 0)
+        self.ildos_spin_component = parameters.get("ildos_spin_component", 0)
+        self.stm_sample_bias = parameters.get("stm_sample_bias", "0.0")
+        self.stm_heights = parameters.get("stm_heights", "2.0")
+        self.stm_currents = parameters.get("stm_currents", "0.00005")
+        self.sel_orbital = parameters.get("sel_orbital", [])
+        self.on_pwcalc_avail_change()
