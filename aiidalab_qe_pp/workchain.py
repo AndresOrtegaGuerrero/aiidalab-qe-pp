@@ -49,8 +49,10 @@ def parse_list_of_tuples(input_list, lsda, number_of_k_points):
                 if isinstance(orbital, int):
                     k_point_info["kband(1)"] = orbital
                 else:
-                    k_point_info["kband(1)"] = orbital[0]
-                    k_point_info["kband(2)"] = orbital[1]
+                    imin = min(orbital)
+                    imax = max(orbital)
+                    k_point_info["kband(1)"] = imin
+                    k_point_info["kband(2)"] = imax
                 result_list.append(k_point_info)
 
     if lsda:

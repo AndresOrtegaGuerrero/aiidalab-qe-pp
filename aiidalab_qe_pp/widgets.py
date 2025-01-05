@@ -115,6 +115,14 @@ class OrbitalSelectionWidget(HorizontalItemWidget):
             layout={"width": "150px"},
         )
         super().__init__(children=[self.kbands, self.kpoint])
+        # Add observers to kbands and kpoint
+        self.kpoint.observe(self._trigger_update, names="value")
+        self.kbands.observe(self._trigger_update, names="value")
+
+    def _trigger_update(self, change):
+        # Notify parent widget to update orbitals
+        if hasattr(self, "parent_widget"):
+            self.parent_widget._update_orbitals()
 
 
 class OrbitalListWidget(VerticalStackWidget, tl.HasTraits):
@@ -125,10 +133,22 @@ class OrbitalListWidget(VerticalStackWidget, tl.HasTraits):
         self.observe(self._update_orbitals, names="items")
 
     def add_item(self, _):
-        self.items += (self.item_class(),)
+        item = self.item_class()
+        # Observe changes in kpoint and kbands for each item
+        item.kpoint.observe(self._on_kpoint_change, names="value")
+        item.kbands.observe(self._on_kbands_change, names="value")
+        self.items += (item,)
 
     def reset(self):
         self.items = []
+        self._update_orbitals()
+
+    def _on_kpoint_change(self, change):
+        """Triggered when kpoint value changes."""
+        self._update_orbitals()
+
+    def _on_kbands_change(self, change):
+        """Triggered when kbands value changes."""
         self._update_orbitals()
 
     # Set the max value of the self.kpoint widget in the OrbitalSelectionWidget
