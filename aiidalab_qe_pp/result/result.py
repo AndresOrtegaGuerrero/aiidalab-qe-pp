@@ -73,7 +73,7 @@ class PpResultsPanel(ResultsPanel[PpResultsModel]):
         needs_stm = self._model.needs_stm_tab()
         if needs_stm:
             stm_visual_model = STMVisualModel()
-            stm_visual_widget = STMVisualWidget(stm_visual_model, pp_node)
+            stm_visual_widget = STMVisualWidget(stm_visual_model, pp_node["stm"])
             tab_data.append(("STM", stm_visual_widget))
 
         # Assign children and titles dynamically
@@ -82,8 +82,8 @@ class PpResultsPanel(ResultsPanel[PpResultsModel]):
             self.tabs.set_title(index, title)
 
         self.children = [self.tabs]
-        self.rendered = True
         self.tabs.selected_index = 0
+        self.rendered = True
 
     def _on_tab_change(self, change):
         if (tab_index := change["new"]) is None:
