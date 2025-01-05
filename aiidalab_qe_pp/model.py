@@ -35,6 +35,7 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
         trait=tl.List(tl.Union([tl.Unicode(), tl.Int()])), default_value=[]
     )
     pwcalc_avail = tl.Int(None, allow_none=True)
+    computer = tl.Unicode("")
 
     calc_charge_dens = tl.Bool(False)
     calc_spin_dens = tl.Bool(False)
@@ -144,7 +145,7 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
 
         self.enable_all_calcs()
         if self.current_calc_lsda:
-            self.calc_spin_dens = False
+            # self.calc_spin_dens = False
             self.disable_calc_spin_dens = False
             self.charge_dens_options = [
                 ("Total charge", 0),
@@ -153,15 +154,15 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
             ]
 
         else:
-            self.calc_spin_dens = False
+            # self.calc_spin_dens = False
             self.disable_calc_spin_dens = True
             self.charge_dens_options = [("Total charge", 0)]
 
         if self.current_calc_soc:
-            self.calc_stm = False
+            # self.calc_stm = False
             self.disable_calc_stm = True
         else:
-            self.calc_stm = False
+            # self.calc_stm = False
             if self.input_structure.pbc != (True, True, True):
                 self.disable_calc_stm = False
             else:
@@ -320,12 +321,13 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
 
         for calc in calc_list:
             try:
+                self.computer = calc.computer.label
                 calc.outputs.remote_folder.listdir()
                 description = "PK: {} LSDA: {} SOC: {} Computer: {}".format(
                     calc.pk,
                     calc.outputs.output_parameters["lsda"],
                     calc.outputs.output_parameters["spin_orbit_calculation"],
-                    calc.computer.label,
+                    self.computer,
                 )
 
                 avail_list.append((description, calc.pk))
@@ -361,6 +363,7 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
         }
 
     def set_model_state(self, parameters: dict):
+        self.pwcalc_type = parameters.get("pwcalc_type", "bands")
         self.current_calc_lsda = parameters.get("current_calc_lsda", False)
         self.pwcalc_avail = parameters.get("pwcalc_avail", None)
         self.calc_charge_dens = parameters.get("calc_charge_dens", False)
@@ -376,4 +379,18 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
         self.stm_heights = parameters.get("stm_heights", "2.0")
         self.stm_currents = parameters.get("stm_currents", "0.00005")
         self.sel_orbital = parameters.get("sel_orbital", [])
-        self.on_pwcalc_avail_change()
+        self.pwcalc_avail_options = [
+            [
+                "PK: {} LSDA: {} SOC: {} Computer: {}".format(
+                    parameters.get("pwcalc_avail", None),
+                    parameters.get("current_calc_lsda", False),
+                    parameters.get("current_calc_soc", False),
+                    parameters.get("computer", "localhost"),
+                ),
+                parameters.get("pwcalc_avail", 0),
+            ]
+        ]
+        self.on_change_calc_charge_dens()
+        self.on_change_calc_stm()
+        self.on_change_calc_wfn()
+        self.on_change_calc_ildos()
