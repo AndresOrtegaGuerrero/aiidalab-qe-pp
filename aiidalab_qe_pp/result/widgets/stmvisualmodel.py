@@ -48,6 +48,13 @@ class STMVisualModel(Model):
     zmax_max = tl.Float(0.0)
     zmax_step = tl.Float(0.0)
 
+    # For images
+
+    image_format_options = tl.List(
+        trait=tl.Unicode(), default_value=["png", "jpeg", "svg", "pdf"]
+    )
+    image_format = tl.Unicode("png")
+
     def fetch_data(self):
         self.list_calcs = list(self.node.keys())
         self.dict_calcs = self.parse_strings_to_dicts(self.list_calcs)
@@ -253,6 +260,43 @@ class STMVisualModel(Model):
                 ),
             ],
         )
+
+    def download_image(self, _=None):
+        """
+        Downloads the current plot as an image in the format specified by self.image_format.
+        """
+        # Define the filename
+        filename = f"stm_plot.{self.image_format}"
+
+        # Generate the image in the specified format
+        image_payload = self.plot.to_image(format=self.image_format)
+
+        # Encode the image payload to base64
+        import base64
+
+        image_payload_base64 = base64.b64encode(image_payload).decode("utf-8")
+
+        # Call the download helper method
+        self._download_image(payload=image_payload_base64, filename=filename)
+
+    @staticmethod
+    def _download_image(payload, filename):
+        from IPython.display import Javascript
+
+        # Safely format the JavaScript code
+        javas = Javascript(
+            """
+            var link = document.createElement('a');
+            link.href = 'data:image/{format};base64,{payload}';
+            link.download = "{filename}";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            """.format(
+                payload=payload, filename=filename, format=filename.split(".")[-1]
+            )
+        )
+        display(javas)
 
     def download_data(self, _=None):
         filename = "stm_calculation.json"

@@ -33,9 +33,20 @@ class STMVisualWidget(ipw.VBox):
         )
         self.calc_nodes.observe(self._update_plot, "value")
 
-        self.download_button = ipw.Button(
+        self.download_raw_button = ipw.Button(
             description="Download Raw Data", button_style="primary"
         )
+
+        self.download_image = ipw.Button(
+            description="Download Image", button_style="primary"
+        )
+        self.download_image.on_click(self._model.download_image)
+        self.image_format = ipw.Dropdown(
+            description="Format:",
+            disabled=False,
+        )
+        ipw.dlink((self._model, "image_format_options"), (self.image_format, "options"))
+        ipw.link((self._model, "image_format"), (self.image_format, "value"))
 
         self.zmax = ipw.BoundedFloatText(
             description="Z Max:",
@@ -50,7 +61,10 @@ class STMVisualWidget(ipw.VBox):
         ipw.link((self._model, "zmax_step"), (self.zmax, "step"))
         self.zmax.observe(self._update_plot_zmax, "value")
 
-        self.children = [self.calc_nodes, self.zmax, self.download_button]
+        self.download_buttons = ipw.HBox(
+            [self.download_raw_button, self.download_image, self.image_format]
+        )
+        self.children = [self.calc_nodes, self.zmax, self.download_buttons]
         self.rendered = True
 
         self._initial_plot()
@@ -58,7 +72,7 @@ class STMVisualWidget(ipw.VBox):
     def _initial_plot(self):
         self._model.create_plot()
         self.plot = self._model.plot
-        self.children = [self.calc_nodes, self.plot, self.zmax, self.download_button]
+        self.children = [self.calc_nodes, self.plot, self.zmax, self.download_buttons]
 
     def _update_plot(self, _):
         self._model.update_plot()
