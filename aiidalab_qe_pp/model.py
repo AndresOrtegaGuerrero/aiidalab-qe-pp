@@ -92,6 +92,8 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
         default_value=[],
     )
 
+    lsign = tl.Bool(False)
+
     def fetch_data(self):
         self.bands_calc_list = self.get_available_pwcalcs(self.input_structure, "bands")
         self.nscf_calc_list = self.get_available_pwcalcs(self.input_structure, "nscf")
@@ -360,6 +362,8 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
             "stm_heights": self.stm_heights,
             "stm_currents": self.stm_currents,
             "sel_orbital": self.sel_orbital,
+            "pwcalc_type": self.pwcalc_type,
+            "lsign": self.lsign,
         }
 
     def set_model_state(self, parameters: dict):
@@ -390,6 +394,7 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
                 parameters.get("pwcalc_avail", 0),
             ]
         ]
+        self.lsign = parameters.get("lsign", False)
         self.on_change_calc_charge_dens()
         self.on_change_calc_stm()
         self.on_change_calc_wfn()

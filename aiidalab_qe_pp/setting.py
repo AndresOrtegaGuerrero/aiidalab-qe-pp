@@ -250,9 +250,16 @@ class PpConfigurationSettingPanel(
             For LSDA calculations, both spin components are automatically computed.
             </div>"""
         )
+        self.lsign = ipw.Checkbox(
+            description="Plot |ψ|² sign(ψ) if k-point is Γ [0.0, 0.0, 0.0]",
+            indent=True,
+            style={"description_width": "initial"},
+        )
+        ipw.link((self._model, "lsign"), (self.lsign, "value"))
         self.wfn_options = ipw.VBox(
             [
                 self.wfn_options_help,
+                self.lsign,
                 self.kbands_info,
                 self.kpoints_table_box,
                 self.sel_orbital,

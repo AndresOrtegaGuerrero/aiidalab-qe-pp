@@ -9,6 +9,9 @@ from aiidalab_qe_pp.result.widgets.cubevisualwidget import CubeVisualWidget
 from aiidalab_qe_pp.result.widgets.stmvisualmodel import STMVisualModel
 from aiidalab_qe_pp.result.widgets.stmvisualwidget import STMVisualWidget
 
+from aiidalab_qe_pp.result.widgets.wfnvisualwidget import WfnVisualWidget
+from aiidalab_qe_pp.result.widgets.wfnvisualmodel import WfnVisualModel
+
 
 class PpResultsPanel(ResultsPanel[PpResultsModel]):
     title = "Post-processing"
@@ -57,7 +60,13 @@ class PpResultsPanel(ResultsPanel[PpResultsModel]):
 
         needs_wfn = self._model.needs_wfn_tab()
         if needs_wfn:
-            tab_data.append(("wfn", "Orbitals"))
+            node = self._model.fetch_child_process_node()
+            wfn_visual_model = WfnVisualModel()
+            wfn_visual_widget = WfnVisualWidget(
+                wfn_visual_model,
+                node,
+            )
+            tab_data.append(("Orbitals", wfn_visual_widget))
 
         needs_ildos = self._model.needs_ildos_tab()
         if needs_ildos:

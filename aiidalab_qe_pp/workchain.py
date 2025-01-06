@@ -94,6 +94,7 @@ def get_builder(codes, structure, parameters):
     number_of_k_points = aiida_node.outputs.output_parameters.get_dict()[
         "number_of_k_points"
     ]
+    lsign = parameters["pp"]["lsign"]
 
     # Parameters
     pp_parameters = {
@@ -114,6 +115,7 @@ def get_builder(codes, structure, parameters):
             ),
             "lsda": lsda,
             "number_of_k_points": number_of_k_points,
+            "lsign": lsign,
         },
     }
     properties = orm.List(list=properties_list)
