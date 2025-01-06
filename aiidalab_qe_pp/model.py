@@ -76,7 +76,7 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
 
     stm_sample_bias = tl.Unicode("0.0")
     stm_heights = tl.Unicode("2.0")
-    stm_currents = tl.Unicode("0.00005")
+    stm_currents = tl.Unicode("0.1")
 
     bands_calc_lis = []
     nscf_calc_list = []

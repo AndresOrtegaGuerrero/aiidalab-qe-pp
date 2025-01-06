@@ -44,7 +44,7 @@ class PpConfigurationSettingPanel(
                 <p>Be cautious with the "Delete work directory" option in Advanced Settings, as it will remove the associated files permanently.</p>
             </div>
             """,
-            layout=ipw.Layout(max_width="100%"),
+            # layout=ipw.Layout(max_width="100%"),
         )
 
         self.comp_description = ipw.HTML(
@@ -55,7 +55,7 @@ class PpConfigurationSettingPanel(
                 The required files for post-processing calculations are stored on that computer.</p>
             </div>
             """,
-            layout=ipw.Layout(max_width="100%"),
+            # layout=ipw.Layout(max_width="100%"),
         )
 
         # Structured selected HTML
@@ -83,6 +83,7 @@ class PpConfigurationSettingPanel(
         self.pwcalc_type = ipw.Dropdown(
             description="Select the pw.x type to use:",
             disabled=False,
+            layout=ipw.Layout(width="fit-content"),
             style={"description_width": "initial"},
         )
         ipw.dlink(
@@ -101,7 +102,7 @@ class PpConfigurationSettingPanel(
         self.pwcalc_avail = ipw.Dropdown(
             description="PwCalculation available:",
             style={"description_width": "initial"},
-            layout={"width": "800px", "display": "block"},
+            layout=ipw.Layout(width="fit-content", display="block"),
         )
         ipw.dlink(
             (self._model, "pwcalc_avail_options"),
@@ -131,7 +132,9 @@ class PpConfigurationSettingPanel(
 
         # Charge Density Calculation
         self.calc_charge_dens = ipw.Checkbox(
-            description="Charge Density", layout={"width": "initial"}
+            description="Charge Density",
+            indent=False,
+            style={"description_width": "initial"},
         )
         ipw.link((self._model, "calc_charge_dens"), (self.calc_charge_dens, "value"))
         ipw.link(
@@ -145,7 +148,9 @@ class PpConfigurationSettingPanel(
 
         # Spin Density Calculation
         self.calc_spin_dens = ipw.Checkbox(
-            description="Spin Density", layout={"width": "initial"}
+            description="Spin Density",
+            indent=False,
+            style={"description_width": "initial"},
         )
         ipw.link((self._model, "calc_spin_dens"), (self.calc_spin_dens, "value"))
         ipw.link(
@@ -154,7 +159,9 @@ class PpConfigurationSettingPanel(
 
         # Kohn Sham Orbitals Calculation
         self.calc_wfn = ipw.Checkbox(
-            description="Kohn Sham Orbitals", layout={"width": "initial"}
+            description="Kohn Sham Orbitals",
+            indent=False,
+            style={"description_width": "initial"},
         )
         ipw.link((self._model, "calc_wfn"), (self.calc_wfn, "value"))
         ipw.link((self._model, "disable_calc_wfn"), (self.calc_wfn, "disabled"))
@@ -167,7 +174,8 @@ class PpConfigurationSettingPanel(
         # Integrated Local Density of States Calculation
         self.calc_ildos = ipw.Checkbox(
             description="Integrated Local Density of States",
-            layout={"width": "initial"},
+            indent=False,
+            style={"description_width": "initial"},
         )
         ipw.link((self._model, "calc_ildos"), (self.calc_ildos, "value"))
         ipw.link((self._model, "disable_calc_ildos"), (self.calc_ildos, "disabled"))
@@ -178,7 +186,9 @@ class PpConfigurationSettingPanel(
 
         # STM Plots Calculation
         self.calc_stm = ipw.Checkbox(
-            description="STM Plots", layout={"width": "initial"}
+            description="STM Plots",
+            indent=False,
+            style={"description_width": "initial"},
         )
         ipw.link((self._model, "calc_stm"), (self.calc_stm, "value"))
         ipw.link((self._model, "disable_calc_stm"), (self.calc_stm, "disabled"))
@@ -233,9 +243,20 @@ class PpConfigurationSettingPanel(
             (self._model, "sel_orbital"),
             (self.sel_orbital, "orbitals"),
         )
-
+        self.wfn_options_help = ipw.HTML(
+            """<div style="line-height: 140%; padding-bottom: 5px">
+            Click <span style="color: #2196f3;"> <b>Add orbital</b> </span> to select the orbitals (Bands) for plotting at a specific k-point.
+            To add orbitals for additional k-points, use the <span style="color: #2196f3;"> <b>Add orbital</b> </span>  button again. The table displays the total number of k-points in your calculation.
+            For LSDA calculations, both spin components are automatically computed.
+            </div>"""
+        )
         self.wfn_options = ipw.VBox(
-            [self.kbands_info, self.kpoints_table_box, self.sel_orbital]
+            [
+                self.wfn_options_help,
+                self.kbands_info,
+                self.kpoints_table_box,
+                self.sel_orbital,
+            ]
         )
 
         ipw.link(
@@ -246,19 +267,20 @@ class PpConfigurationSettingPanel(
         # Calc ILDOS Options
         self.ildos_emin = ipw.FloatText(
             description="Emin (eV):",
-            disabled=False,
+            style={"description_width": "initial"},
+            layout=ipw.Layout(width="fit-content"),
         )
         ipw.link((self._model, "ildos_emin"), (self.ildos_emin, "value"))
         self.ildos_emax = ipw.FloatText(
             description="Emax (eV):",
-            disabled=False,
+            style={"description_width": "initial"},
+            layout=ipw.Layout(width="fit-content"),
         )
         ipw.link((self._model, "ildos_emax"), (self.ildos_emax, "value"))
 
         self.ildos_spin_component = ipw.Dropdown(
             description="Spin component:",
-            disabled=False,
-            layout={"description_width": "initial"},
+            style={"description_width": "initial"},
         )
         ipw.dlink(
             (self._model, "ildos_spin_component_options"),
@@ -272,9 +294,23 @@ class PpConfigurationSettingPanel(
             (self._model, "ildos_spin_component_options_displayed"),
             (self.ildos_spin_component.layout, "display"),
         )
+        self.ildos_parameters_help = ipw.HTML(
+            """<div style="line-height: 140%; padding-bottom: 5px">
+            Select the energy range and spin component (LSDA) for the integrated local density of states calculation.
+            </div>"""
+        )
 
-        self.ildos_parameters = ipw.HBox(
-            [self.ildos_emin, self.ildos_emax, self.ildos_spin_component]
+        self.ildos_parameters = ipw.VBox(
+            [
+                self.ildos_parameters_help,
+                ipw.HBox(
+                    [
+                        self.ildos_emin,
+                        self.ildos_emax,
+                        self.ildos_spin_component,
+                    ]
+                ),
+            ]
         )
         ipw.link(
             (self._model, "ildos_options_displayed"),

@@ -110,6 +110,7 @@ class OrbitalSelectionWidget(HorizontalItemWidget):
         )
         self.kbands = ipw.Text(
             description="Bands:",
+            placeholder="e.g. 1..5 8 10",
             value="",
             style={"description_width": "initial"},
             layout={"width": "150px"},
@@ -438,7 +439,7 @@ class KpointInfoWidget(ipw.VBox):
         self.electron_info = ipw.HTML()
         self.kpoints_table = ipw.Output()
         self.sel_orbital = OrbitalListWidget(
-            item_class=OrbitalSelectionWidget, add_button_text="Add Orbital"
+            item_class=OrbitalSelectionWidget, add_button_text="Add orbital"
         )
         super().__init__(
             children=[
