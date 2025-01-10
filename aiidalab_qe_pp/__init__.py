@@ -1,34 +1,33 @@
-from aiidalab_qe.common.panel import OutlinePanel
-from aiidalab_qe.common.widgets import QEAppComputationalResourcesWidget
+from aiidalab_qe.common.panel import PluginOutline
+
+from aiidalab_qe_pp.code import PpResourceSettingsModel, PpResourceSettingsPanel
 
 
-from .result import Result
-from aiidalab_qe_pp.setting import Setting
 from aiidalab_qe_pp.workchain import workchain_and_builder
+from aiidalab_qe_pp.model import PpConfigurationSettingsModel
+from aiidalab_qe_pp.setting import PpConfigurationSettingPanel
+
+from aiidalab_qe_pp.result.model import PpResultsModel
+from aiidalab_qe_pp.result.result import PpResultsPanel
 
 
-__version__ = "0.0.1"
+class PpPluginOutline(PluginOutline):
+    title = "Post-processing (PP)"
 
-
-class PpOutline(OutlinePanel):
-    title = "Data analysis and plotting (PP)"
-    help = """"""
-
-
-pp_code = QEAppComputationalResourcesWidget(
-    description="pp.x",
-    default_calc_job_plugin="quantumespresso.pp",
-)
-
-critic2_code = QEAppComputationalResourcesWidget(
-    description="critic2",
-    default_calc_job_plugin="critic2",
-)
 
 pp = {
-    "outline": PpOutline,
-    "code": {"pp": pp_code, "critic2": critic2_code},
-    "setting": Setting,
+    "outline": PpPluginOutline,
+    "configuration": {
+        "panel": PpConfigurationSettingPanel,
+        "model": PpConfigurationSettingsModel,
+    },
+    "resources": {
+        "panel": PpResourceSettingsPanel,
+        "model": PpResourceSettingsModel,
+    },
+    "result": {
+        "panel": PpResultsPanel,
+        "model": PpResultsModel,
+    },
     "workchain": workchain_and_builder,
-    "result": Result,
 }

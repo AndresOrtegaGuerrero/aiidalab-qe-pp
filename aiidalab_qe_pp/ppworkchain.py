@@ -351,6 +351,15 @@ class PPWorkChain(WorkChain):
             )
             inputs.parent_folder = self.inputs.parent_folder
             inputs.parameters = get_parameters("wfn", band)
+            lsign = self.inputs.parameters["wfn"].get("lsign", False)
+            number_of_k_points = self.inputs.parameters["wfn"].get(
+                "number_of_k_points", 1
+            )
+            lsda = self.inputs.parameters["wfn"].get("lsda", False)
+            if lsign and band["kpoint"] == 1:
+                inputs.parameters["INPUTPP"]["lsign"] = True
+            elif lsign and lsda and band["kpoint"] == number_of_k_points + 1:
+                inputs.parameters["INPUTPP"]["lsign"] = True
             inputs.metadata.label = label
             inputs.metadata.call_link_label = label
             future = self.submit(PpCalculation, **inputs)

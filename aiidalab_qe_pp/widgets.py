@@ -2,21 +2,19 @@ import aiidalab_widgets_base as awb
 import ipywidgets as ipw
 import traitlets as tl
 import numpy as np
-from aiida import orm
 
 
-from aiida_quantumespresso.workflows.pw.bands import PwBandsWorkChain
-from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
-from aiida_quantumespresso.calculations.pw import PwCalculation
 from IPython.display import HTML, clear_output, display
 from scipy.interpolate import griddata
 import plotly.graph_objects as go
-from paramiko.ssh_exception import SSHException
 
+from aiida import orm
+from aiida_quantumespresso.workflows.pw.bands import PwBandsWorkChain
+from aiida_quantumespresso.workflows.pw.base import PwBaseWorkChain
+from aiida_quantumespresso.calculations.pw import PwCalculation
+from paramiko.ssh_exception import SSHException
 from aiidalab_qe.plugins.bands.bands_workchain import BandsWorkChain
 from aiida_wannier90_workflows.workflows import ProjwfcBandsWorkChain
-
-
 from aiida.common.exceptions import NotExistent
 
 # Cube Visual Widget
@@ -112,30 +110,56 @@ class OrbitalSelectionWidget(HorizontalItemWidget):
         )
         self.kbands = ipw.Text(
             description="Bands:",
+            placeholder="e.g. 1..5 8 10",
             value="",
             style={"description_width": "initial"},
             layout={"width": "150px"},
         )
         super().__init__(children=[self.kbands, self.kpoint])
+        # Add observers to kbands and kpoint
+        self.kpoint.observe(self._trigger_update, names="value")
+        self.kbands.observe(self._trigger_update, names="value")
+
+    def _trigger_update(self, change):
+        # Notify parent widget to update orbitals
+        if hasattr(self, "parent_widget"):
+            self.parent_widget._update_orbitals()
 
 
-class OrbitalListWidget(VerticalStackWidget):
+class OrbitalListWidget(VerticalStackWidget, tl.HasTraits):
+    orbitals = tl.List([])
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.observe(self._update_orbitals, names="items")
+
     def add_item(self, _):
-        self.items += (self.item_class(),)
+        item = self.item_class()
+        # Observe changes in kpoint and kbands for each item
+        item.kpoint.observe(self._on_kpoint_change, names="value")
+        item.kbands.observe(self._on_kbands_change, names="value")
+        self.items += (item,)
 
-    def reset(
-        self,
-    ):
+    def reset(self):
         self.items = []
+        self._update_orbitals()
+
+    def _on_kpoint_change(self, change):
+        """Triggered when kpoint value changes."""
+        self._update_orbitals()
+
+    def _on_kbands_change(self, change):
+        """Triggered when kbands value changes."""
+        self._update_orbitals()
 
     # Set the max value of the self.kpoint widget in the OrbitalSelectionWidget
     def set_max_kpoint(self, max_kpoint):
         for item in self.items:
             item.kpoint.max = max_kpoint
 
-    @property
-    def orbitals(self):
-        return [(item.kbands.value, item.kpoint.value) for item in self.items]
+    def _update_orbitals(self, *_):
+        """Update the orbitals trait when items change."""
+        self.orbitals = [(item.kbands.value, item.kpoint.value) for item in self.items]
 
 
 class PwCalcListWidget(ipw.VBox):
@@ -395,7 +419,7 @@ class PwCalcListWidget(ipw.VBox):
 
     def set_options_pwcalc_avail(self, pk):
         calc = orm.load_node(pk)
-        description = "PK: {} LSDA = {} SOC = {} Computer = {} ".format(
+        description = "PK: {} LSDA: {} SOC {} Computer = {} ".format(
             calc.pk,
             calc.outputs.output_parameters["lsda"],
             calc.outputs.output_parameters["spin_orbit_calculation"],
@@ -415,7 +439,7 @@ class KpointInfoWidget(ipw.VBox):
         self.electron_info = ipw.HTML()
         self.kpoints_table = ipw.Output()
         self.sel_orbital = OrbitalListWidget(
-            item_class=OrbitalSelectionWidget, add_button_text="Add Orbital"
+            item_class=OrbitalSelectionWidget, add_button_text="Add orbital"
         )
         super().__init__(
             children=[

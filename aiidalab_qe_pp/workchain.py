@@ -1,7 +1,7 @@
 from aiida.plugins import WorkflowFactory
 from aiida import orm
 from aiidalab_widgets_base.utils import string_range_to_list
-from aiidalab_qe.plugins.utils import set_component_resources
+from aiidalab_qe.utils import set_component_resources
 
 
 PPWorkChain = WorkflowFactory("pp_app.pp")
@@ -49,8 +49,10 @@ def parse_list_of_tuples(input_list, lsda, number_of_k_points):
                 if isinstance(orbital, int):
                     k_point_info["kband(1)"] = orbital
                 else:
-                    k_point_info["kband(1)"] = orbital[0]
-                    k_point_info["kband(2)"] = orbital[1]
+                    imin = min(orbital)
+                    imax = max(orbital)
+                    k_point_info["kband(1)"] = imin
+                    k_point_info["kband(2)"] = imax
                 result_list.append(k_point_info)
 
     if lsda:
@@ -88,17 +90,15 @@ def get_builder(codes, structure, parameters):
     remote_folder = aiida_node.outputs.remote_folder
 
     # Orbitals
-    lsda = parameters["pp"]["lsda"]
+    lsda = parameters["pp"]["current_calc_lsda"]
     number_of_k_points = aiida_node.outputs.output_parameters.get_dict()[
         "number_of_k_points"
     ]
+    lsign = parameters["pp"]["lsign"]
 
-    # StructureData Used
-    pk = parameters["pp"]["structure_pk"]
-    structure = orm.load_node(pk)
     # Parameters
     pp_parameters = {
-        "charge_dens": {"spin_component": parameters["pp"]["charge_dens_options"]},
+        "charge_dens": {"spin_component": parameters["pp"]["charge_dens"]},
         "ildos": {
             "emin": parameters["pp"]["ildos_emin"],
             "emax": parameters["pp"]["ildos_emax"],
@@ -115,6 +115,7 @@ def get_builder(codes, structure, parameters):
             ),
             "lsda": lsda,
             "number_of_k_points": number_of_k_points,
+            "lsign": lsign,
         },
     }
     properties = orm.List(list=properties_list)
