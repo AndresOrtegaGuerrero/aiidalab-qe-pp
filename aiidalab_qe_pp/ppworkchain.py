@@ -422,6 +422,7 @@ class PPWorkChain(WorkChain):
             bias_label = create_valid_link_label(bias_ev)
             inputs.metadata.label = f"bias_{bias_label}"
             inputs.metadata.call_link_label = f"bias_{bias_label}"
+            inputs.metadata.options.parse_data_files = False
             running = self.submit(PpCalculation, **inputs)
             self.report(f"launching STM PpCalculation<{running.pk}> bias_{bias_label}")
             self.to_context(**{f"bias_{bias_label}": running})

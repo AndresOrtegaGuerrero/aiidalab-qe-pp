@@ -41,7 +41,10 @@ class CubeVisualWidget(ipw.VBox):
         self.viewer.from_ase(self._model.input_structure)
         isovalue = 2 * np.std(self._model.cube_data) + np.mean(self._model.cube_data)
         self.viewer.avr.iso.volumetric_data = {"values": self._model.cube_data}
-        self.viewer.avr.iso.settings = {"isovalue": isovalue, "mode": 0}
+        self.viewer.avr.iso.settings = {
+            "positive": {"isovalue": isovalue},
+            "negative": {"isovalue": -isovalue, "color": "yellow"},
+        }
         self.viewer.avr.color_type = "JMOL"
         self.viewer.avr.model_style = 1
 
