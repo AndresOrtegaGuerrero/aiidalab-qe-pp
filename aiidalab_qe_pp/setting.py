@@ -243,6 +243,10 @@ class PpConfigurationSettingPanel(
             (self._model, "sel_orbital"),
             (self.sel_orbital, "orbitals"),
         )
+        ipw.link(
+            (self._model, "number_of_kpoints"),
+            (self.sel_orbital, "max_kpoint"),
+        )
         self.wfn_options_help = ipw.HTML(
             """<div style="line-height: 140%; padding-bottom: 5px">
             Click <span style="color: #2196f3;"> <b>Add orbital</b> </span> to select the orbitals (Bands) for plotting at a specific k-point.

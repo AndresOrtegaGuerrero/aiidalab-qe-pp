@@ -128,6 +128,7 @@ class OrbitalSelectionWidget(HorizontalItemWidget):
 
 class OrbitalListWidget(VerticalStackWidget, tl.HasTraits):
     orbitals = tl.List([])
+    max_kpoint = tl.Int()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -138,6 +139,7 @@ class OrbitalListWidget(VerticalStackWidget, tl.HasTraits):
         # Observe changes in kpoint and kbands for each item
         item.kpoint.observe(self._on_kpoint_change, names="value")
         item.kbands.observe(self._on_kbands_change, names="value")
+        item.kpoint.max = self.max_kpoint
         self.items += (item,)
 
     def reset(self):
@@ -151,11 +153,6 @@ class OrbitalListWidget(VerticalStackWidget, tl.HasTraits):
     def _on_kbands_change(self, change):
         """Triggered when kbands value changes."""
         self._update_orbitals()
-
-    # Set the max value of the self.kpoint widget in the OrbitalSelectionWidget
-    def set_max_kpoint(self, max_kpoint):
-        for item in self.items:
-            item.kpoint.max = max_kpoint
 
     def _update_orbitals(self, *_):
         """Update the orbitals trait when items change."""

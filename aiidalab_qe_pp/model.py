@@ -86,6 +86,7 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
 
     kbands_info = tl.Unicode("")
     kpoints_table = tl.Unicode("")
+    number_of_kpoints = tl.Int(1)
 
     sel_orbital = tl.List(
         trait=tl.List(tl.Union([tl.Unicode(), tl.Int()])),
@@ -144,6 +145,7 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
 
         kpoints = calc.outputs.output_band.get_kpoints()
         self.kpoints_table = self.update_kpoints_info(kpoints)
+        self.number_of_kpoints = calc.outputs.output_parameters["number_of_k_points"]
 
         self.enable_all_calcs()
         if self.current_calc_lsda:
