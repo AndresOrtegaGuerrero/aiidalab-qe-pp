@@ -18,7 +18,7 @@ from .widgets import OrbitalListWidget, OrbitalSelectionWidget
 class PpConfigurationSettingPanel(
     ConfigurationSettingsPanel[PpConfigurationSettingsModel],
 ):
-    title = "Pp Settings"
+    title = "Pp settings"
     identifier = "pp"
 
     def __init__(self, model: PpConfigurationSettingsModel, **kwargs):
@@ -41,7 +41,7 @@ class PpConfigurationSettingPanel(
                 Choose the type of calculation (Bands or NSCF) and then select the specific calculation you want to use.
 
                 <h5>Note:</h5>
-                <p>Be cautious with the "Delete work directory" option in Advanced Settings, as it will remove the associated files permanently.</p>
+                <p>Be cautious with the "Delete work directory" option in Advanced settings, as it will remove the associated files permanently.</p>
             </div>
             """,
             # layout=ipw.Layout(max_width="100%"),
@@ -73,7 +73,7 @@ class PpConfigurationSettingPanel(
         # STM help
         self.calc_stm_help = ipw.HTML(
             """<div style="line-height: 140%; padding-top: 0px; padding-bottom: 5px">
-            Write the list of parameters (Bias , Heights and Currents) to compute separated by a space. For example: 0.0 0.1 0.2
+            Write the list of parameters (bias , heights and currents) to compute separated by a space. For example: 0.0 0.1 0.2
             </div>"""
         )
 
@@ -132,7 +132,7 @@ class PpConfigurationSettingPanel(
 
         # Charge Density Calculation
         self.calc_charge_dens = ipw.Checkbox(
-            description="Charge Density",
+            description="Charge density",
             indent=False,
             style={"description_width": "initial"},
         )
@@ -148,7 +148,7 @@ class PpConfigurationSettingPanel(
 
         # Spin Density Calculation
         self.calc_spin_dens = ipw.Checkbox(
-            description="Spin Density",
+            description="Spin density",
             indent=False,
             style={"description_width": "initial"},
         )
@@ -158,7 +158,7 @@ class PpConfigurationSettingPanel(
         )
         # Electrostatic Potential Calculation
         self.calc_potential = ipw.Checkbox(
-            description="Electrostatic Potential",
+            description="Electrostatic potential",
             indent=False,
             style={"description_width": "initial"},
         )
@@ -170,7 +170,7 @@ class PpConfigurationSettingPanel(
 
         # Kohn Sham Orbitals Calculation
         self.calc_wfn = ipw.Checkbox(
-            description="Kohn Sham Orbitals",
+            description="Kohn-Sham orbitals",
             indent=False,
             style={"description_width": "initial"},
         )
@@ -184,7 +184,7 @@ class PpConfigurationSettingPanel(
 
         # Integrated Local Density of States Calculation
         self.calc_ildos = ipw.Checkbox(
-            description="Integrated Local Density of States",
+            description="Integrated local density of states",
             indent=False,
             style={"description_width": "initial"},
         )
@@ -197,7 +197,7 @@ class PpConfigurationSettingPanel(
 
         # STM Plots Calculation
         self.calc_stm = ipw.Checkbox(
-            description="STM Plots",
+            description="STM plots",
             indent=False,
             style={"description_width": "initial"},
         )
@@ -341,19 +341,19 @@ class PpConfigurationSettingPanel(
 
         # Calc STM Options
         self.stm_sample_bias = ipw.Text(
-            description="Sample bias List (eV):",
+            description="Sample bias list (eV):",
             disabled=False,
             style={"description_width": "initial"},
         )
         ipw.link((self._model, "stm_sample_bias"), (self.stm_sample_bias, "value"))
         self.stm_heights = ipw.Text(
-            description="Heights List (Å): ",
+            description="Heights list (Å): ",
             disabled=False,
             style={"description_width": "initial"},
         )
         ipw.link((self._model, "stm_heights"), (self.stm_heights, "value"))
         self.stm_currents = ipw.Text(
-            description="Currents List (a.u): ",
+            description="Currents list (a.u): ",
             disabled=False,
             style={"description_width": "initial"},
             placeholder="arbitrary units",
