@@ -388,6 +388,7 @@ class PpConfigurationSettingPanel(
             self.calc_charge_dens,
             self.charge_dens_options,
             self.calc_spin_dens,
+            self.calc_potential,
             self.calc_wfn,
             self.wfn_options,
             self.calc_ildos,
