@@ -7,7 +7,7 @@ from weas_widget import WeasWidget
 class WfnVisualWidget(ipw.VBox):
     def __init__(self, model: WfnVisualModel, node, **kwargs):
         super().__init__(
-            children=[ipw.HTML("Loading Wfn data...")],
+            children=[ipw.HTML("Loading wfn data...")],
             **kwargs,
         )
         self._model = model
