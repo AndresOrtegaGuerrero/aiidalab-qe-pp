@@ -58,6 +58,17 @@ class PpResultsPanel(ResultsPanel[PpResultsModel]):
 
             tab_data.append(("Spin density", cube_visual_widget))
 
+        needs_potential = self._model.needs_potential_tab()
+        if needs_potential:
+            node = self._model.fetch_child_process_node()
+            cube_data = pp_node.potential.output_data.get_array("data")
+            plot_num = "potential"
+            cube_visual_model = CubeVisualModel()
+            cube_visual_widget = CubeVisualWidget(
+                cube_visual_model, node, cube_data, plot_num
+            )
+            tab_data.append(("Potential", cube_visual_widget))
+
         needs_wfn = self._model.needs_wfn_tab()
         if needs_wfn:
             node = self._model.fetch_child_process_node()
