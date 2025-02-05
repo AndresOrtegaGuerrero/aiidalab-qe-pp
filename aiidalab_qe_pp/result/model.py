@@ -21,6 +21,10 @@ class PpResultsModel(ResultsModel):
         node = self.get_pp_node()
         return "spin_dens" in node
 
+    def needs_potential_tab(self):
+        node = self.get_pp_node()
+        return "potential" in node
+
     def needs_wfn_tab(self):
         node = self.get_pp_node()
         return "wfn" in node

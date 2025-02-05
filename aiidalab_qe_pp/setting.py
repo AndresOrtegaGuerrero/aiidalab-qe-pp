@@ -156,6 +156,17 @@ class PpConfigurationSettingPanel(
         ipw.link(
             (self._model, "disable_calc_spin_dens"), (self.calc_spin_dens, "disabled")
         )
+        # Electrostatic Potential Calculation
+        self.calc_potential = ipw.Checkbox(
+            description="Electrostatic Potential",
+            indent=False,
+            style={"description_width": "initial"},
+        )
+        ipw.link((self._model, "calc_potential"), (self.calc_potential, "value"))
+        ipw.link(
+            (self._model, "disable_calc_potential"),
+            (self.calc_potential, "disabled"),
+        )
 
         # Kohn Sham Orbitals Calculation
         self.calc_wfn = ipw.Checkbox(

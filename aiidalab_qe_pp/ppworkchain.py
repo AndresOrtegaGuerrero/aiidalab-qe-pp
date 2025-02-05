@@ -46,6 +46,9 @@ def get_parameters(calc_type: str, settings: dict) -> orm.Dict:
                 "spin_component": settings.get("ildos_spin_component", 0),
             },
         },
+        "potential": {
+            "plot_num": 11,
+        },
     }
 
     config = calc_config.get(calc_type, {})
@@ -177,6 +180,10 @@ class PPWorkChain(WorkChain):
                 cls.run_spin_dens,
                 cls.inspect_spin_dens,
             ),
+            if_(cls.should_run_potential)(
+                cls.run_potential,
+                cls.inspect_potential,
+            ),
             if_(cls.should_run_wfn)(
                 cls.run_wfn,
                 cls.inspect_wfn,
@@ -209,6 +216,11 @@ class PPWorkChain(WorkChain):
                 "required": False,
                 "help": "Spin Density `PpCalculation`.",
             },
+        )
+        spec.expose_outputs(
+            PpCalculation,
+            namespace="potential",
+            namespace_options={"required": False, "help": "Potential `PpCalculation`."},
         )
         spec.expose_outputs(
             PpCalculation,
@@ -250,6 +262,9 @@ class PPWorkChain(WorkChain):
             206,
             "ERROR_SUB_PROCESS_FAILED",
             message="One (or more) of the sub processes failed.",
+        )
+        spec.exit_code(
+            207, "ERROR_POTENTIAL_FAILED", message="The potential calculation failed."
         )
 
     @classmethod
@@ -335,6 +350,28 @@ class PPWorkChain(WorkChain):
                 f"Spin Density PpCalculation failed with exit status {calculation.exit_status}"
             )
             return self.exit_codes.ERROR_SPIN_DENS_FAILED
+
+    def should_run_potential(self):
+        return "calc_potential" in self.inputs.properties
+
+    def run_potential(self):
+        inputs = AttributeDict(self.exposed_inputs(PpCalculation, namespace="pp_calc"))
+        inputs.parent_folder = self.inputs.parent_folder
+        potential_parameters = get_parameters("potential", {})
+        inputs.parameters = potential_parameters
+        running = self.submit(PpCalculation, **inputs)
+        self.report(f"launching Potential PpCalculation<{running.pk}>")
+        return ToContext(calc_potential=running)
+
+    def inspect_potential(self):
+        """Inspect the results of the potential calculation."""
+        calculation = self.ctx.calc_potential
+
+        if not calculation.is_finished_ok:
+            self.report(
+                f"Potential PpCalculation failed with exit status {calculation.exit_status}"
+            )
+            return self.exit_codes.ERROR_POTENTIAL_FAILED
 
     def should_run_wfn(self):
         return "calc_wfn" in self.inputs.properties

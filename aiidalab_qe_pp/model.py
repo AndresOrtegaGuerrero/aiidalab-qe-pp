@@ -42,12 +42,14 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
     calc_wfn = tl.Bool(False)
     calc_ildos = tl.Bool(False)
     calc_stm = tl.Bool(False)
+    calc_potential = tl.Bool(False)
 
     disable_calc_charge_dens = tl.Bool(False)
     disable_calc_spin_dens = tl.Bool(False)
     disable_calc_wfn = tl.Bool(False)
     disable_calc_ildos = tl.Bool(False)
     disable_calc_stm = tl.Bool(False)
+    disable_calc_potential = tl.Bool(False)
 
     charge_dens = tl.Int(0)
     charge_dens_options = tl.List(
@@ -209,6 +211,7 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
         self.disable_calc_wfn = True
         self.disable_calc_ildos = True
         self.disable_calc_stm = True
+        self.disable_calc_potential = True
 
     def enable_all_calcs(self):
         self.disable_calc_charge_dens = False
@@ -216,6 +219,7 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
         self.disable_calc_wfn = False
         self.disable_calc_ildos = False
         self.disable_calc_stm = False
+        self.disable_calc_potential = False
 
     def update_kpoints_info(self, list_kpoints):
         """Update table with the kpoints. Number - (kx,ky,kz).  list_kpoints"""
