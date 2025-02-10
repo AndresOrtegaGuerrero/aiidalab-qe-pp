@@ -8,12 +8,6 @@ from aiidalab_qe.common.panel import ConfigurationSettingsPanel
 from .model import PpConfigurationSettingsModel
 from .widgets import OrbitalListWidget, OrbitalSelectionWidget
 
-# import traitlets as tl
-# from aiidalab_qe.common.panel import Panel
-# from aiida import orm
-# from .widgets import PwCalcListWidget, KpointInfoWidget
-# from IPython.display import clear_output, display
-
 
 class PpConfigurationSettingPanel(
     ConfigurationSettingsPanel[PpConfigurationSettingsModel],
@@ -126,6 +120,23 @@ class PpConfigurationSettingPanel(
         ipw.link(
             (self._model, "no_avail_cals"),
             (self.no_avail_cals, "value"),
+        )
+
+        # Use original cube files or save reduced cube files
+        self.reduce_cube_files_help = ipw.HTML(
+            """<div style="line-height: 140%; padding-top: 0px; padding-bottom: 5px">
+            <h5>Reduce CUBE Files:</h5>
+            <p>Enable this option to scale down the resolution of CUBE files. A scaling factor will be automatically determined to generate a reduced file while preserving essential data.</p>
+            </div>"""
+        )
+        self.reduce_cube_files = ipw.Checkbox(
+            description="Scale down the resolution of the files.",
+            indent=False,
+            style={"description_width": "300px"},
+        )
+        ipw.link(
+            (self._model, "reduce_cube_files"),
+            (self.reduce_cube_files, "value"),
         )
 
         # Calculation options
@@ -384,6 +395,8 @@ class PpConfigurationSettingPanel(
             self.pwcalc_type,
             self.no_avail_cals,
             self.pwcalc_avail,
+            self.reduce_cube_files_help,
+            self.reduce_cube_files,
             self.calc_options_help,
             self.calc_charge_dens,
             self.charge_dens_options,

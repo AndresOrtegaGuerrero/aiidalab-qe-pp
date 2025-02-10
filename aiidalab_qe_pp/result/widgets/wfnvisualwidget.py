@@ -74,16 +74,47 @@ class WfnVisualWidget(ipw.VBox):
         )
 
         self.download_button = ipw.Button(
-            description="Download Cube", button_style="primary"
+            description="Cube file",
+            button_style="primary",
+            icon="download",
         )
         self.download_button.on_click(self._model.download_cube)
+
+        # Download original files from HPC source
+        self.info_original_files = ipw.HTML(
+            """
+            <b>Download original files from computer source:</b>
+            <p>Since you selected the option to reduce the cube files, the original files can be downloaded from the computer source, provided the directories are still available.</p>
+            <p>Please ensure your SSH connection is working and click on the 'Source file' button.</p>
+            """
+        )
+        self.download_source_button = ipw.Button(
+            description="Source file",
+            button_style="primary",
+            icon="download",
+        )
+        self.download_source_button.on_click(self._model.download_source_files)
+        self.error_message = ipw.HTML("")
+        ipw.link((self._model, "error_message"), (self.error_message, "value"))
+        self.download_source_box = ipw.VBox(
+            [self.info_original_files, self.download_source_button, self.error_message]
+        )
 
         self.plot = WeasWidget(guiConfig=self.guiConfig)
         self.plot.from_ase(self._model.input_structure)
         self.plot.avr.color_type = "JMOL"
         self.plot.avr.model_style = 1
         self._update_plot()
-        self.children = [self.controls, self.plot, self.download_button]
+
+        if self._model.reduce_cube_files:
+            self.children = [
+                self.controls,
+                self.plot,
+                self.download_button,
+                self.download_source_box,
+            ]
+        else:
+            self.children = [self.controls, self.plot, self.download_button]
         self.rendered = True
 
     def _update_plot(self):

@@ -48,15 +48,45 @@ class CubeVisualWidget(ipw.VBox):
         self.viewer.avr.color_type = "JMOL"
         self.viewer.avr.model_style = 1
 
-        # Display Button
-        self.display_button = ipw.Button(description="Display", button_style="primary")
         # Download Cubefile Button
         self.download_button = ipw.Button(
-            description="Download", button_style="primary"
+            description="Cube file",
+            button_style="primary",
+            icon="download",
         )
-        self.buttons = ipw.HBox([self.display_button, self.download_button])
-        self.download_button.on_click(self._model.download_cube)
-        self.display_button.on_click(self._model.display(self.viewer))
 
-        self.children = [self.viewer, self.download_button]
+        self.download_button.on_click(self._model.download_cube)
+
+        # Download original files from HPC source
+
+        self.info_original_files = ipw.HTML(
+            """
+            <b>Download original files from computer source:</b>
+            <p>Since you selected the option to reduce the cube files, the original files can be downloaded from the computer source, provided the directories are still available.</p>
+            <p>Please ensure your SSH connection is working and click on the 'Source file' button.</p>
+            """
+        )
+        self.download_source_button = ipw.Button(
+            description="Source file",
+            button_style="primary",
+            icon="download",
+        )
+        self.download_source_button.on_click(self._model.download_source_files)
+
+        self.error_message = ipw.HTML("")
+        ipw.link((self._model, "error_message"), (self.error_message, "value"))
+
+        self.download_source_box = ipw.VBox(
+            [self.info_original_files, self.download_source_button, self.error_message]
+        )
+
+        if self._model.reduce_cube_files:
+            self.children = [
+                self.viewer,
+                self.download_button,
+                self.download_source_box,
+            ]
+        else:
+            self.children = [self.viewer, self.buttons]
+
         self.rendered = True

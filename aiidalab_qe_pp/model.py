@@ -37,6 +37,8 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
     pwcalc_avail = tl.Int(None, allow_none=True)
     computer = tl.Unicode("")
 
+    reduce_cube_files = tl.Bool(False)
+
     calc_charge_dens = tl.Bool(False)
     calc_spin_dens = tl.Bool(False)
     calc_wfn = tl.Bool(False)
@@ -282,13 +284,6 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
                     with_incoming="base",
                     tag="calc",
                 )
-                .append(
-                    orm.Dict,
-                    filters={
-                        "attributes.CONTROL.calculation": "bands",
-                    },
-                    with_outgoing="calc",
-                )
                 .all(flat=True)
             )
 
@@ -317,15 +312,14 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
                     with_incoming="base",
                     tag="calc",
                 )
-                .append(
-                    orm.Dict,
-                    filters={
-                        "attributes.CONTROL.calculation": "nscf",
-                    },
-                    with_outgoing="calc",
-                )
                 .all(flat=True)
             )
+
+        calc_list = [
+            calc
+            for calc in calc_list
+            if calc.inputs.parameters["CONTROL"]["calculation"] == wc_type
+        ]
 
         for calc in calc_list:
             try:
@@ -353,10 +347,12 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
 
     def get_model_state(self):
         return {
+            "reduce_cube_files": self.reduce_cube_files,
             "current_calc_lsda": self.current_calc_lsda,
             "pwcalc_avail": self.pwcalc_avail,
             "calc_charge_dens": self.calc_charge_dens,
             "calc_spin_dens": self.calc_spin_dens,
+            "calc_potential": self.calc_potential,
             "calc_wfn": self.calc_wfn,
             "calc_ildos": self.calc_ildos,
             "calc_stm": self.calc_stm,
@@ -373,11 +369,13 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
         }
 
     def set_model_state(self, parameters: dict):
+        self.reduce_cube_files = parameters.get("reduce_cube_files", False)
         self.pwcalc_type = parameters.get("pwcalc_type", "bands")
         self.current_calc_lsda = parameters.get("current_calc_lsda", False)
         self.pwcalc_avail = parameters.get("pwcalc_avail", None)
         self.calc_charge_dens = parameters.get("calc_charge_dens", False)
         self.calc_spin_dens = parameters.get("calc_spin_dens", False)
+        self.calc_potential = parameters.get("calc_potential", False)
         self.calc_wfn = parameters.get("calc_wfn", False)
         self.calc_ildos = parameters.get("calc_ildos", False)
         self.calc_stm = parameters.get("calc_stm", False)

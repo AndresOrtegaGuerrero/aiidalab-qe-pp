@@ -22,6 +22,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         "weas-widget==0.1.20",
+        "aiida-pythonjob",
     ],
     extras_require={
         "dev": [
