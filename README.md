@@ -10,6 +10,34 @@ cd aiidalab-qe-pp
 pip install -e .
 ```
 
+## Python
+
+This plugin enables the computation of reduced-size cube files generated from Python using the [AiiDA-PythonJob plugin](https://github.com/aiidateam/aiida-pythonjob).
+To ensure compatibility, set up an AiiDA code that utilizes the same Python version as your AiiDAlab environment.
+Ensure that your environment includes the `pymatgen` and `scikit-image` libraries.
+Once configured, you can set up your AiiDA code with the following command:
+
+
+```bash
+verdi code create core.code.installed --config python_code.yml
+```
+
+In the `python_code.yml` file, specify the configuration for your HPC system within AiiDAlab as follows:
+
+```bash
+---
+label: 'python-py39'
+description: 'python at daint alps'
+default_calc_job_plugin: 'pythonjob.pythonjob'
+filepath_executable: '/users/username/miniconda3/envs/py39/bin/python'
+computer: 'daint-alps'
+prepend_text: |
+   conda activate py39
+
+append_text: ' '
+```
+
+
 ## Critic2 Integration
 
 This plugin utilizes [Critic2](https://aoterodelaroza.github.io/critic2/) software to compute Scanning Tunneling Microscopy (STM) images from Quantum ESPRESSO output data.
