@@ -25,6 +25,11 @@ class PpResourceSettingsModel(PluginResourceSettingsModel):
                     description="critic2",
                     default_calc_job_plugin="critic2",
                 ),
+                "python": CodeModel(
+                    name="python",
+                    description="Python code for isosurface calculation",
+                    default_calc_job_plugin="pythonjob.pythonjob",
+                ),
             }
         )
 

@@ -11,6 +11,7 @@ from IPython.display import Javascript
 from IPython.display import display
 import tempfile
 import os
+import threading
 
 
 class WfnVisualModel(Model):
@@ -18,6 +19,8 @@ class WfnVisualModel(Model):
     input_structure = tl.Instance(Atoms, allow_none=True)
     aiida_structure = tl.Instance(StructureData, allow_none=True)
     cube_data = tl.Instance(np.ndarray, allow_none=True)
+    reduce_cube_files = tl.Bool(False)
+    error_message = tl.Unicode("")
 
     kpoint_band_data = tl.List(
         trait=tl.Dict(),
@@ -67,6 +70,9 @@ class WfnVisualModel(Model):
         self.kpoint = self.kpoints_dropdown_options[0]
         self._update_bands_options(self.kpoint)
         self.band = self.bands_dropdown_options[0]
+        self.reduce_cube_files = self.node.inputs.parameters.get(
+            "reduce_cube_files", False
+        )
 
     def _update_bands_options(self, kpoint):
         bands = next(
@@ -193,3 +199,105 @@ class WfnVisualModel(Model):
 
         # Clean up by removing the temporary file
         os.unlink(tmp.name)
+
+    def download_source_files(self, _=None):
+        """Download the original cube files from the computer source."""
+        kpoint = self.kpoint
+        band = self.band
+
+        if self.lsda and self.spin == "down":
+            kpoint += self.number_of_k_points
+
+        key_dict = self.get_key_remote_folder(self.node.outputs.wfn, kpoint, band)
+
+        if key_dict == "":
+            message = "Unfortunately there is no access to this file."
+            self.error_message = (
+                f'<div style="color: red; font-weight: bold;">{message}</div>'
+            )
+            threading.Timer(3.0, self.clear_error_message).start()
+            return
+
+        remote_folder = self.node.outputs.wfn[key_dict].remote_folder
+
+        if remote_folder.is_empty:
+            message = "Unfortunately the remote folder is empty."
+            self.error_message = (
+                f'<div style="color: red; font-weight: bold;">{message}</div>'
+            )
+            threading.Timer(3.0, self.clear_error_message).start()
+            return
+
+        filtered_files = [
+            file for file in remote_folder.listdir() if file.endswith("aiida.fileout")
+        ]
+
+        remote_file = None
+        if "aiida.fileout" in filtered_files:
+            remote_file = "aiida.fileout"
+        else:
+            # To take the numbers between B and aiida.fileout
+            pattern = re.compile(r"B(\d+)aiida\.fileout$")
+            for file in filtered_files:
+                match = pattern.search(file)
+                if match:
+                    band_number = int(match.group(1))
+                    if band_number == band:
+                        remote_file = file
+                        break
+        if remote_file is None:
+            self.error_message = "Unfortunately there is a problem with the file."
+            threading.Timer(3.0, self.clear_error_message).start()
+            return
+
+        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            temp_file_path = tmp.name
+
+        try:
+            remote_folder.getfile(remote_file, temp_file_path)
+
+            # Read the content of the temporary file
+            with open(temp_file_path, "rb") as file:
+                raw_bytes = file.read()
+
+            # Encode the file content to base64
+            base64_payload = base64.b64encode(raw_bytes).decode()
+
+            filename = f"plot_wfn_kp_{kpoint}_kb_{band}"
+
+            # JavaScript to trigger download
+            filename = f"{filename}.cube"
+            js_download = Javascript(
+                f"""
+                var link = document.createElement('a');
+                link.href = "data:application/octet-stream;base64,{base64_payload}";
+                link.download = "{filename}";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                """
+            )
+            display(js_download)
+
+        finally:
+            # Ensure the temporary file is deleted after the operation
+            if os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+
+    def clear_error_message(self):
+        self.error_message = ""
+
+    def get_key_remote_folder(self, outputs, kpoint, band):
+        result = ""
+        for key in outputs.keys():
+            list_elements = key.split("_")
+            rel_kpoint = int(list_elements[1])
+            if len(list_elements) == 4:
+                rel_band = [int(list_elements[3])]
+            elif len(list_elements) == 5:
+                rel_band = list(range(int(list_elements[3]), int(list_elements[4]) + 1))
+
+            if rel_kpoint == kpoint and band in rel_band:
+                result = key
+
+        return result

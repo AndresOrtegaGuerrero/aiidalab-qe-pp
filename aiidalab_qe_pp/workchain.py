@@ -75,7 +75,7 @@ def update_resources(builder, codes):
 def get_builder(codes, structure, parameters):
     pp_code = codes.get("pp")["code"]
     critic2_code = codes.get("critic2")["code"]
-
+    python_code = codes.get("python")["code"]
     # Filter the dictionary to include only keys that start with 'calc_'
     calc_parameters = {
         key: value for key, value in parameters["pp"].items() if key.startswith("calc_")
@@ -117,6 +117,7 @@ def get_builder(codes, structure, parameters):
             "number_of_k_points": number_of_k_points,
             "lsign": lsign,
         },
+        "reduce_cube_files": parameters["pp"]["reduce_cube_files"],
     }
     properties = orm.List(list=properties_list)
     parameters = orm.Dict(dict=pp_parameters)
@@ -124,6 +125,7 @@ def get_builder(codes, structure, parameters):
         parent_folder=remote_folder,
         pp_code=pp_code,
         critic2_code=critic2_code,
+        python=python_code,
         parameters=parameters,
         properties=properties,
         structure=structure,

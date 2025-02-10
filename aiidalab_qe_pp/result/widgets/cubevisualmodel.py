@@ -10,6 +10,7 @@ import os
 from aiida.orm import StructureData
 from aiida.orm.nodes.process.workflow.workchain import WorkChainNode
 import numpy as np
+import threading
 
 
 class CubeVisualModel(Model):
@@ -18,10 +19,15 @@ class CubeVisualModel(Model):
     aiida_structure = tl.Instance(StructureData, allow_none=True)
     cube_data = tl.Instance(np.ndarray, allow_none=True)
     plot_num = tl.Unicode("spin_dens")
+    reduce_cube_files = tl.Bool(False)
+    error_message = tl.Unicode("")
 
     def fetch_data(self):
         self.input_structure = self.node.inputs.structure.get_ase()
         self.aiida_structure = self.node.inputs.structure
+        self.reduce_cube_files = self.node.inputs.parameters.get(
+            "reduce_cube_files", False
+        )
 
     def download_cube(self, _=None, filename="plot"):
         # Create a temporary file, write to it, and initiate download
@@ -67,11 +73,49 @@ class CubeVisualModel(Model):
         # Clean up by removing the temporary file
         os.unlink(tmp.name)
 
-    def display(self, viewer):
-        viewer._widget.send_js_task({"name": "tjs.onWindowResize", "kwargs": {}})
-        viewer._widget.send_js_task(
-            {
-                "name": "tjs.updateCameraAndControls",
-                "kwargs": {"direction": [0, -100, 0]},
-            }
-        )
+    def download_source_files(self, _=None):
+        remote_folder = self.node.outputs[f"{self.plot_num}"].remote_folder
+        if remote_folder.is_empty:
+            message = "Unfortunately the remote folder is empty."
+            self.error_message = (
+                f'<div style="color: red; font-weight: bold;">{message}</div>'
+            )
+            threading.Timer(3.0, self.clear_error_message).start()
+            return
+
+        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            temp_file_path = tmp.name
+
+        try:
+            remote_folder.getfile("aiida.fileout", temp_file_path)
+
+            # Read the content of the temporary file
+            with open(temp_file_path, "rb") as file:
+                raw_bytes = file.read()
+
+            # Encode the file content to base64
+            base64_payload = base64.b64encode(raw_bytes).decode()
+
+            filename = f"plot_{self.plot_num}"
+
+            # JavaScript to trigger download
+            filename = f"{filename}.cube"
+            js_download = Javascript(
+                f"""
+                var link = document.createElement('a');
+                link.href = "data:application/octet-stream;base64,{base64_payload}";
+                link.download = "{filename}";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                """
+            )
+            display(js_download)
+
+        finally:
+            # Ensure the temporary file is deleted after the operation
+            if os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+
+    def clear_error_message(self):
+        self.error_message = ""
