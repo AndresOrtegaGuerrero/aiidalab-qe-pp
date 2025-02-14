@@ -4,6 +4,7 @@ from aiida.common.extendeddicts import AttributeDict
 import numpy as np
 import plotly.graph_objects as go
 from scipy.interpolate import griddata
+from scipy.ndimage import gaussian_filter
 from IPython.display import display
 import base64
 import json
@@ -75,10 +76,10 @@ class STMVisualModel(Model):
             "fstm"
         )
         self._process_data()
-        self.zmax = np.max(self.z_grid)
-        self.zmax_min = np.min(self.z_grid)
-        self.zmax_max = np.max(self.z_grid)
-        self.zmax_step = (np.max(self.z_grid) - np.min(self.z_grid)) / 100
+        self.zmax = np.nanmax(self.z_grid)
+        self.zmax_min = np.nanmin(self.z_grid)
+        self.zmax_max = np.nanmax(self.z_grid)
+        self.zmax_step = (np.nanmax(self.z_grid) - np.nanmin(self.z_grid)) / 100
 
     def update_plot(self):
         self._on_change_calc_node()
@@ -141,6 +142,17 @@ class STMVisualModel(Model):
 
         X, Y = np.meshgrid(self.unique_x, self.unique_y)
         Z = griddata((x_valid, y_valid), z_valid, (X, Y), method="cubic")
+
+        # **Check if NaNs exist**
+        if np.isnan(Z).any():
+            # Create mask of NaNs
+            nan_mask = np.isnan(Z)
+
+            # Use Gaussian smoothing (fills NaNs without changing shape)
+            Z_filled = gaussian_filter(Z, sigma=1)
+
+            # Replace NaN values only
+            Z[nan_mask] = Z_filled[nan_mask]
 
         self.x_grid = X
         self.y_grid = Y
