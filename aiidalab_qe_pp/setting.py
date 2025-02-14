@@ -68,6 +68,7 @@ class PpConfigurationSettingPanel(
         self.calc_stm_help = ipw.HTML(
             """<div style="line-height: 140%; padding-top: 0px; padding-bottom: 5px">
             Write the list of parameters (bias , heights and currents) to compute separated by a space. For example: 0.0 0.1 0.2
+            Heights should not exceed the c vector of the structure.
             </div>"""
         )
 

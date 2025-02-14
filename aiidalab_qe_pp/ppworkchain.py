@@ -874,9 +874,9 @@ class PPWorkChain(WorkChain):
             )
             inputs.parent_folder = self.inputs.parent_folder
             inputs.parameters = get_parameters("stm", {"sample_bias": bias})
-            bias_ev = bias_ev = text2floatlist(
-                self.inputs.parameters["stm"]["sample_bias"]
-            )[bias_index]
+            bias_ev = text2floatlist(self.inputs.parameters["stm"]["sample_bias"])[
+                bias_index
+            ]
             bias_label = create_valid_link_label(bias_ev)
             inputs.metadata.label = f"bias_{bias_label}"
             inputs.metadata.call_link_label = f"bias_{bias_label}"
@@ -903,9 +903,9 @@ class PPWorkChain(WorkChain):
         stm_parameters = parse_stm_parameters(self.inputs.parameters["stm"])
 
         for bias_index, bias in enumerate(stm_parameters["sample_bias"]):
-            bias_ev = bias_ev = text2floatlist(
-                self.inputs.parameters["stm"]["sample_bias"]
-            )[bias_index]
+            bias_ev = text2floatlist(self.inputs.parameters["stm"]["sample_bias"])[
+                bias_index
+            ]
             bias_label = create_valid_link_label(bias_ev)
 
             if stm_parameters["heights"]:
@@ -949,7 +949,7 @@ class PPWorkChain(WorkChain):
                     )[current_index]
 
                     # for labeling with . in the name
-                    current_label = str(current_pA).replace(".", "_")
+                    current_label = create_valid_link_label(current_pA)
 
                     inputs = AttributeDict(
                         self.exposed_inputs(
