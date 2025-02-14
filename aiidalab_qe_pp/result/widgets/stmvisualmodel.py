@@ -45,8 +45,8 @@ class STMVisualModel(Model):
 
     zmax = tl.Float(0.0)
     zmax_min = tl.Float(0.0)
-    zmax_max = tl.Float(0.0)
-    zmax_step = tl.Float(0.0)
+    zmax_max = tl.Float(30.0)
+    zmax_step = tl.Float(0.1)
 
     # For images
 

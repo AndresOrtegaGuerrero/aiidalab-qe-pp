@@ -53,12 +53,12 @@ class STMVisualWidget(ipw.VBox):
             continuous_update=False,
         )
         ipw.link((self._model, "zmax"), (self.zmax, "value"))
-        ipw.link((self._model, "zmax_min"), (self.zmax, "min"))
-        ipw.link(
+        ipw.dlink((self._model, "zmax_min"), (self.zmax, "min"))
+        ipw.dlink(
             (self._model, "zmax_max"),
             (self.zmax, "max"),
         )
-        ipw.link((self._model, "zmax_step"), (self.zmax, "step"))
+        ipw.dlink((self._model, "zmax_step"), (self.zmax, "step"))
         self.zmax.observe(self._update_plot_zmax, "value")
 
         self.download_buttons = ipw.HBox(
