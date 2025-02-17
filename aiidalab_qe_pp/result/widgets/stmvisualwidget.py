@@ -36,7 +36,7 @@ class STMVisualWidget(ipw.VBox):
         self.download_raw_button = ipw.Button(
             description="Download Raw Data", button_style="primary"
         )
-
+        self.download_raw_button.on_click(self._model.download_data)
         self.download_image = ipw.Button(
             description="Download Image", button_style="primary"
         )
