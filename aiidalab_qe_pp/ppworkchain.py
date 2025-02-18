@@ -5,6 +5,7 @@ from aiida.common import AttributeDict
 from aiida_pythonjob.launch import prepare_pythonjob_inputs
 from aiida_pythonjob import PythonJob
 import numpy as np
+from .utils import resized_cube_files
 
 PpCalculation = CalculationFactory("quantumespresso.pp")
 Critic2Calculation = CalculationFactory("critic2")
@@ -52,12 +53,14 @@ def get_parameters(calc_type: str, settings: dict) -> orm.Dict:
             "plot_num": 11,
         },
         "ldos_grid": {
-            "plot_num": 3, 
-            "extra_params":{
+            "plot_num": 3,
+            "extra_params": {
                 "emin": settings.get("emin", 0),
                 "emax": settings.get("emax", 0),
                 "delta_e": settings.get("delta_e", 0.1),
+                "degauss_ldos": settings.get("degauss_ldos", 0.01),
             },
+        },
     }
 
     config = calc_config.get(calc_type, {})
@@ -272,6 +275,7 @@ class PPWorkChain(WorkChain):
         )
         spec.output_namespace("stm", dynamic=True)
         spec.output_namespace("wfn", dynamic=True)
+        spec.output_namespace("ldos_grid", dynamic=True)
 
         spec.exit_code(
             201,
@@ -344,20 +348,43 @@ class PPWorkChain(WorkChain):
 
         return builder
 
+    def submission_pp_calc(self, calc_type: str):
+        """Submit a PP calculation based on the calculation type."""
+
+        calc = f"{calc_type[5:]}"
+        inputs = AttributeDict(self.exposed_inputs(PpCalculation, namespace="pp_calc"))
+        inputs.parent_folder = self.inputs.parent_folder
+        calc_parameters = (
+            {} if calc in ["spin_dens", "potential"] else self.inputs.parameters[calc]
+        )
+        parameters = get_parameters(calc, calc_parameters)
+        inputs.parameters = parameters
+        if self.inputs.parameters["reduce_cube_files"]:
+            inputs.metadata.options.parse_data_files = False
+        running = self.submit(PpCalculation, **inputs)
+        self.report(f"launching {calc_type} PpCalculation<{running.pk}>")
+        return running
+
+    def submission_pythonjob_calc(self, workchain):
+        """Submit a PythonJob calculation based on the calculation type."""
+        inputs = prepare_pythonjob_inputs(
+            resized_cube_files,
+            code=self.inputs.python,
+            function_outputs=[{"name": "results"}],
+            parent_folder=workchain.outputs.remote_folder,
+            computer=self.inputs.python.computer,
+            register_pickle_by_value=True,
+        )
+        node = self.submit(PythonJob, **inputs)
+        self.report(f"launching PythonJob<{node.pk}> to reduce cube files")
+        return node
+
     def should_run_charge_dens(self):
         return "calc_charge_dens" in self.inputs.properties
 
     def run_charge_dens(self):
-        inputs = AttributeDict(self.exposed_inputs(PpCalculation, namespace="pp_calc"))
-        inputs.parent_folder = self.inputs.parent_folder
-        charge_dens_parameters = get_parameters(
-            "charge_dens", self.inputs.parameters["charge_dens"]
-        )
-        inputs.parameters = charge_dens_parameters
-        if self.inputs.parameters["reduce_cube_files"]:
-            inputs.metadata.options.parse_data_files = False
-        running = self.submit(PpCalculation, **inputs)
-        self.report(f"launching Charge Density PpCalculation<{running.pk}>")
+        """Submit a charge density calculation."""
+        running = self.submission_pp_calc("calc_charge_dens")
         return ToContext(calc_charge_dens=running)
 
     def inspect_charge_dens(self):
@@ -376,90 +403,15 @@ class PPWorkChain(WorkChain):
     def reduce_charge_dens(self):
         """Submit aiida pythonjob calculation"""
         workchain = self.ctx.calc_charge_dens
-
-        def process_cube_files():
-            import os
-            import numpy as np
-            from pymatgen.io.common import VolumetricData
-            from skimage.transform import resize
-            from skimage.metrics import structural_similarity as ssim
-
-            def optimal_scaling_factor(
-                data, min_factor=0.1, max_factor=1.0, step=0.1, threshold=0.99
-            ):
-                """
-                Determine the optimal scaling factor for downsampling 3D data without significant loss of information.
-                """
-                original_shape = data.shape
-                best_factor = max_factor
-                # best_ssim = 1.0
-
-                for factor in np.arange(max_factor, min_factor, -step):
-                    new_shape = tuple(
-                        max(1, int(dim * factor)) for dim in original_shape
-                    )
-                    resized_data = resize(
-                        data, new_shape, anti_aliasing=True
-                    )  # Upsample back to original shape for comparison
-                    upsampled_data = resize(
-                        resized_data, original_shape, anti_aliasing=True
-                    )
-                    current_ssim = ssim(
-                        data, upsampled_data, data_range=data.max() - data.min()
-                    )  # Compute structural_similarity between the original and upsampled data
-
-                    if current_ssim >= threshold:
-                        best_factor = factor
-                        # best_ssim = current_ssim
-                    else:
-                        break
-
-                return best_factor
-
-            folder = "parent_folder"
-            results = {}
-            for filename in os.listdir(folder):
-                if filename.endswith(".fileout"):
-                    filepath = os.path.join(folder, filename)
-                    volumetric_data = VolumetricData.from_cube(filepath)
-                    data = volumetric_data.data["total"]
-                    scaling_factor = optimal_scaling_factor(data)
-                    new_shape = tuple(int(dim * scaling_factor) for dim in data.shape)
-                    resized_data = resize(data, new_shape, anti_aliasing=True).tolist()
-
-                    if "aiida.fileout" == filename:
-                        results["aiida_fileout"] = resized_data
-                    else:
-                        kpoint_band = "_".join(
-                            filename.split("aiida")[1].split("_")[1:]
-                        )
-                        results[kpoint_band] = resized_data
-
-            return results
-
-        inputs = prepare_pythonjob_inputs(
-            process_cube_files,
-            code=self.inputs.python,
-            function_outputs=[{"name": "results"}],
-            parent_folder=workchain.outputs.remote_folder,
-            computer=self.inputs.python.computer,
-        )
-        node = self.submit(PythonJob, **inputs)
-        self.report(f"launching PythonJob<{node.pk}> to reduce cube files")
+        node = self.submission_pythonjob_calc(workchain)
         return ToContext(reduce_calc_charge_dens=node)
 
     def should_run_spin_dens(self):
         return "calc_spin_dens" in self.inputs.properties
 
     def run_spin_dens(self):
-        inputs = AttributeDict(self.exposed_inputs(PpCalculation, namespace="pp_calc"))
-        inputs.parent_folder = self.inputs.parent_folder
-        spin_dens_parameters = get_parameters("spin_dens", {})
-        inputs.parameters = spin_dens_parameters
-        if self.inputs.parameters["reduce_cube_files"]:
-            inputs.metadata.options.parse_data_files = False
-        running = self.submit(PpCalculation, **inputs)
-        self.report(f"launching Spin Density PpCalculation<{running.pk}>")
+        """Submit a spin density calculation."""
+        running = self.submission_pp_calc("calc_spin_dens")
         return ToContext(calc_spin_dens=running)
 
     def inspect_spin_dens(self):
@@ -477,90 +429,15 @@ class PPWorkChain(WorkChain):
 
     def reduce_spin_dens(self):
         workchain = self.ctx.calc_spin_dens
-
-        def process_cube_files():
-            import os
-            import numpy as np
-            from pymatgen.io.common import VolumetricData
-            from skimage.transform import resize
-            from skimage.metrics import structural_similarity as ssim
-
-            def optimal_scaling_factor(
-                data, min_factor=0.1, max_factor=1.0, step=0.1, threshold=0.99
-            ):
-                """
-                Determine the optimal scaling factor for downsampling 3D data without significant loss of information.
-                """
-                original_shape = data.shape
-                best_factor = max_factor
-                # best_ssim = 1.0
-
-                for factor in np.arange(max_factor, min_factor, -step):
-                    new_shape = tuple(
-                        max(1, int(dim * factor)) for dim in original_shape
-                    )
-                    resized_data = resize(
-                        data, new_shape, anti_aliasing=True
-                    )  # Upsample back to original shape for comparison
-                    upsampled_data = resize(
-                        resized_data, original_shape, anti_aliasing=True
-                    )
-                    current_ssim = ssim(
-                        data, upsampled_data, data_range=data.max() - data.min()
-                    )  # Compute structural_similarity between the original and upsampled data
-
-                    if current_ssim >= threshold:
-                        best_factor = factor
-                        # best_ssim = current_ssim
-                    else:
-                        break
-
-                return best_factor
-
-            folder = "parent_folder"
-            results = {}
-            for filename in os.listdir(folder):
-                if filename.endswith(".fileout"):
-                    filepath = os.path.join(folder, filename)
-                    volumetric_data = VolumetricData.from_cube(filepath)
-                    data = volumetric_data.data["total"]
-                    scaling_factor = optimal_scaling_factor(data)
-                    new_shape = tuple(int(dim * scaling_factor) for dim in data.shape)
-                    resized_data = resize(data, new_shape, anti_aliasing=True).tolist()
-
-                    if "aiida.fileout" == filename:
-                        results["aiida_fileout"] = resized_data
-                    else:
-                        kpoint_band = "_".join(
-                            filename.split("aiida")[1].split("_")[1:]
-                        )
-                        results[kpoint_band] = resized_data
-
-            return results
-
-        inputs = prepare_pythonjob_inputs(
-            process_cube_files,
-            code=self.inputs.python,
-            function_outputs=[{"name": "results"}],
-            parent_folder=workchain.outputs.remote_folder,
-            computer=self.inputs.python.computer,
-        )
-        node = self.submit(PythonJob, **inputs)
-        self.report(f"launching PythonJob<{node.pk}> to reduce cube files")
+        node = self.submission_pythonjob_calc(workchain)
         return ToContext(reduce_calc_spin_dens=node)
 
     def should_run_potential(self):
         return "calc_potential" in self.inputs.properties
 
     def run_potential(self):
-        inputs = AttributeDict(self.exposed_inputs(PpCalculation, namespace="pp_calc"))
-        inputs.parent_folder = self.inputs.parent_folder
-        potential_parameters = get_parameters("potential", {})
-        inputs.parameters = potential_parameters
-        if self.inputs.parameters["reduce_cube_files"]:
-            inputs.metadata.options.parse_data_files = False
-        running = self.submit(PpCalculation, **inputs)
-        self.report(f"launching Potential PpCalculation<{running.pk}>")
+        """Submit a potential calculation."""
+        running = self.submission_pp_calc("calc_potential")
         return ToContext(calc_potential=running)
 
     def inspect_potential(self):
@@ -577,91 +454,16 @@ class PPWorkChain(WorkChain):
         return self.inputs.parameters.get("reduce_cube_files")
 
     def reduce_potential(self):
-        def process_cube_files():
-            import os
-            import numpy as np
-            from pymatgen.io.common import VolumetricData
-            from skimage.transform import resize
-            from skimage.metrics import structural_similarity as ssim
-
-            def optimal_scaling_factor(
-                data, min_factor=0.1, max_factor=1.0, step=0.1, threshold=0.99
-            ):
-                """
-                Determine the optimal scaling factor for downsampling 3D data without significant loss of information.
-                """
-                original_shape = data.shape
-                best_factor = max_factor
-                # best_ssim = 1.0
-
-                for factor in np.arange(max_factor, min_factor, -step):
-                    new_shape = tuple(
-                        max(1, int(dim * factor)) for dim in original_shape
-                    )
-                    resized_data = resize(
-                        data, new_shape, anti_aliasing=True
-                    )  # Upsample back to original shape for comparison
-                    upsampled_data = resize(
-                        resized_data, original_shape, anti_aliasing=True
-                    )
-                    current_ssim = ssim(
-                        data, upsampled_data, data_range=data.max() - data.min()
-                    )  # Compute structural_similarity between the original and upsampled data
-
-                    if current_ssim >= threshold:
-                        best_factor = factor
-                        # best_ssim = current_ssim
-                    else:
-                        break
-
-                return best_factor
-
-            folder = "parent_folder"
-            results = {}
-            for filename in os.listdir(folder):
-                if filename.endswith(".fileout"):
-                    filepath = os.path.join(folder, filename)
-                    volumetric_data = VolumetricData.from_cube(filepath)
-                    data = volumetric_data.data["total"]
-                    scaling_factor = optimal_scaling_factor(data)
-                    new_shape = tuple(int(dim * scaling_factor) for dim in data.shape)
-                    resized_data = resize(data, new_shape, anti_aliasing=True).tolist()
-
-                    if "aiida.fileout" == filename:
-                        results["aiida_fileout"] = resized_data
-                    else:
-                        kpoint_band = "_".join(
-                            filename.split("aiida")[1].split("_")[1:]
-                        )
-                        results[kpoint_band] = resized_data
-
-            return results
-
         workchain = self.ctx.calc_potential
-        inputs = prepare_pythonjob_inputs(
-            process_cube_files,
-            code=self.inputs.python,
-            function_outputs=[{"name": "results"}],
-            parent_folder=workchain.outputs.remote_folder,
-            computer=self.inputs.python.computer,
-        )
-        node = self.submit(PythonJob, **inputs)
-        self.report(f"launching PythonJob<{node.pk}> to reduce cube files")
+        node = self.submission_pythonjob_calc(workchain)
         return ToContext(reduce_calc_potential=node)
-
 
     def should_run_ldos_grid(self):
         return "calc_ldos_grid" in self.inputs.properties
 
     def run_ldos_grid(self):
-        inputs = AttributeDict(self.exposed_inputs(PpCalculation, namespace="pp_calc"))
-        inputs.parent_folder = self.inputs.parent_folder
-        ldos_grid_parameters = get_parameters("ldos_grid", self.inputs.parameters["ldos_grid"])
-        inputs.parameters = ldos_grid_parameters
-        if self.inputs.parameters["reduce_cube_files"]:
-            inputs.metadata.options.parse_data_files = False
-        running = self.submit(PpCalculation, **inputs)
-        self.report(f"launching LDOS Grid PpCalculation<{running.pk}>")
+        """Submit a LDOS Grid calculation."""
+        running = self.submission_pp_calc("calc_ldos_grid")
         return ToContext(calc_ldos_grid=running)
 
     def inspect_ldos_grid(self):
@@ -679,76 +481,7 @@ class PPWorkChain(WorkChain):
 
     def reduce_ldos_grid(self):
         workchain = self.ctx.calc_ldos_grid
-
-        def process_cube_files():
-            import os
-            import numpy as np
-            from pymatgen.io.common import VolumetricData
-            from skimage.transform import resize
-            from skimage.metrics import structural_similarity as ssim
-
-            def optimal_scaling_factor(
-                data, min_factor=0.1, max_factor=1.0, step=0.1, threshold=0.99
-            ):
-                """
-                Determine the optimal scaling factor for downsampling 3D data without significant loss of information.
-                """
-                original_shape = data.shape
-                best_factor = max_factor
-                # best_ssim = 1.0
-
-                for factor in np.arange(max_factor, min_factor, -step):
-                    new_shape = tuple(
-                        max(1, int(dim * factor)) for dim in original_shape
-                    )
-                    resized_data = resize(
-                        data, new_shape, anti_aliasing=True
-                    )  # Upsample back to original shape for comparison
-                    upsampled_data = resize(
-                        resized_data, original_shape, anti_aliasing=True
-                    )
-                    current_ssim = ssim(
-                        data, upsampled_data, data_range=data.max() - data.min()
-                    )  # Compute structural_similarity between the original and upsampled data
-
-                    if current_ssim >= threshold:
-                        best_factor = factor
-                        # best_ssim = current_ssim
-                    else:
-                        break
-
-                return best_factor
-
-            folder = "parent_folder"
-            results = {}
-            for filename in os.listdir(folder):
-                if filename.endswith(".fileout"):
-                    filepath = os.path.join(folder, filename)
-                    volumetric_data = VolumetricData.from_cube(filepath)
-                    data = volumetric_data.data["total"]
-                    scaling_factor = optimal_scaling_factor(data)
-                    new_shape = tuple(int(dim * scaling_factor) for dim in data.shape)
-                    resized_data = resize(data, new_shape, anti_aliasing=True).tolist()
-
-                    if "aiida.fileout" == filename:
-                        results["aiida_fileout"] = resized_data
-                    else:
-                        kpoint_band = "_".join(
-                            filename.split("aiida")[1].split("_")[1:]
-                        )
-                        results[kpoint_band] = resized_data
-
-            return results
-
-        inputs = prepare_pythonjob_inputs(
-            process_cube_files,
-            code=self.inputs.python,
-            function_outputs=[{"name": "results"}],
-            parent_folder=workchain.outputs.remote_folder,
-            computer=self.inputs.python.computer,
-        )
-        node = self.submit(PythonJob, **inputs)
-        self.report(f"launching PythonJob<{node.pk}> to reduce cube files")
+        node = self.submission_pythonjob_calc(workchain)
         return ToContext(reduce_calc_ldos_grid=node)
 
     def should_run_wfn(self):
@@ -804,66 +537,6 @@ class PPWorkChain(WorkChain):
         return self.inputs.parameters.get("reduce_cube_files")
 
     def reduce_wfn(self):
-        def process_cube_files():
-            import os
-            import numpy as np
-            from pymatgen.io.common import VolumetricData
-            from skimage.transform import resize
-            from skimage.metrics import structural_similarity as ssim
-
-            def optimal_scaling_factor(
-                data, min_factor=0.1, max_factor=1.0, step=0.1, threshold=0.99
-            ):
-                """
-                Determine the optimal scaling factor for downsampling 3D data without significant loss of information.
-                """
-                original_shape = data.shape
-                best_factor = max_factor
-                # best_ssim = 1.0
-
-                for factor in np.arange(max_factor, min_factor, -step):
-                    new_shape = tuple(
-                        max(1, int(dim * factor)) for dim in original_shape
-                    )
-                    resized_data = resize(
-                        data, new_shape, anti_aliasing=True
-                    )  # Upsample back to original shape for comparison
-                    upsampled_data = resize(
-                        resized_data, original_shape, anti_aliasing=True
-                    )
-                    current_ssim = ssim(
-                        data, upsampled_data, data_range=data.max() - data.min()
-                    )  # Compute structural_similarity between the original and upsampled data
-
-                    if current_ssim >= threshold:
-                        best_factor = factor
-                        # best_ssim = current_ssim
-                    else:
-                        break
-
-                return best_factor
-
-            folder = "parent_folder"
-            results = {}
-            for filename in os.listdir(folder):
-                if filename.endswith(".fileout"):
-                    filepath = os.path.join(folder, filename)
-                    volumetric_data = VolumetricData.from_cube(filepath)
-                    data = volumetric_data.data["total"]
-                    scaling_factor = optimal_scaling_factor(data)
-                    new_shape = tuple(int(dim * scaling_factor) for dim in data.shape)
-                    resized_data = resize(data, new_shape, anti_aliasing=True).tolist()
-
-                    if "aiida.fileout" == filename:
-                        results["aiida_fileout"] = resized_data
-                    else:
-                        kpoint_band = "_".join(
-                            filename.split("aiida")[1].split("_")[1:]
-                        )
-                        results[kpoint_band] = resized_data
-
-            return results
-
         filtered_workchains = {
             label: workchain
             for label, workchain in self.ctx.items()
@@ -871,29 +544,15 @@ class PPWorkChain(WorkChain):
         }
 
         for label, workchain in filtered_workchains.items():
-            inputs = prepare_pythonjob_inputs(
-                process_cube_files,
-                code=self.inputs.python,
-                function_outputs=[{"name": "results"}],
-                parent_folder=workchain.outputs.remote_folder,
-                computer=self.inputs.python.computer,
-            )
-            node = self.submit(PythonJob, **inputs)
-            self.report(f"launching PythonJob<{node.pk}> to reduce cube files")
+            node = self.submission_pythonjob_calc(workchain)
             self.to_context(**{f"reduce_{label}": node})
 
     def should_run_ildos(self):
         return "calc_ildos" in self.inputs.properties
 
     def run_ildos(self):
-        inputs = AttributeDict(self.exposed_inputs(PpCalculation, namespace="pp_calc"))
-        inputs.parent_folder = self.inputs.parent_folder
-        ildos_parameters = get_parameters("ildos", self.inputs.parameters["ildos"])
-        inputs.parameters = ildos_parameters
-        if self.inputs.parameters["reduce_cube_files"]:
-            inputs.metadata.options.parse_data_files = False
-        running = self.submit(PpCalculation, **inputs)
-        self.report(f"launching ILDOS PpCalculation<{running.pk}>")
+        """Submit an ILDOS calculation."""
+        running = self.submission_pp_calc("calc_ildos")
         return ToContext(calc_ildos=running)
 
     def inspect_ildos(self):
@@ -911,76 +570,7 @@ class PPWorkChain(WorkChain):
 
     def reduce_ildos(self):
         workchain = self.ctx.calc_ildos
-
-        def process_cube_files():
-            import os
-            import numpy as np
-            from pymatgen.io.common import VolumetricData
-            from skimage.transform import resize
-            from skimage.metrics import structural_similarity as ssim
-
-            def optimal_scaling_factor(
-                data, min_factor=0.1, max_factor=1.0, step=0.1, threshold=0.99
-            ):
-                """
-                Determine the optimal scaling factor for downsampling 3D data without significant loss of information.
-                """
-                original_shape = data.shape
-                best_factor = max_factor
-                # best_ssim = 1.0
-
-                for factor in np.arange(max_factor, min_factor, -step):
-                    new_shape = tuple(
-                        max(1, int(dim * factor)) for dim in original_shape
-                    )
-                    resized_data = resize(
-                        data, new_shape, anti_aliasing=True
-                    )  # Upsample back to original shape for comparison
-                    upsampled_data = resize(
-                        resized_data, original_shape, anti_aliasing=True
-                    )
-                    current_ssim = ssim(
-                        data, upsampled_data, data_range=data.max() - data.min()
-                    )  # Compute structural_similarity between the original and upsampled data
-
-                    if current_ssim >= threshold:
-                        best_factor = factor
-                        # best_ssim = current_ssim
-                    else:
-                        break
-
-                return best_factor
-
-            folder = "parent_folder"
-            results = {}
-            for filename in os.listdir(folder):
-                if filename.endswith(".fileout"):
-                    filepath = os.path.join(folder, filename)
-                    volumetric_data = VolumetricData.from_cube(filepath)
-                    data = volumetric_data.data["total"]
-                    scaling_factor = optimal_scaling_factor(data)
-                    new_shape = tuple(int(dim * scaling_factor) for dim in data.shape)
-                    resized_data = resize(data, new_shape, anti_aliasing=True).tolist()
-
-                    if "aiida.fileout" == filename:
-                        results["aiida_fileout"] = resized_data
-                    else:
-                        kpoint_band = "_".join(
-                            filename.split("aiida")[1].split("_")[1:]
-                        )
-                        results[kpoint_band] = resized_data
-
-            return results
-
-        inputs = prepare_pythonjob_inputs(
-            process_cube_files,
-            code=self.inputs.python,
-            function_outputs=[{"name": "results"}],
-            parent_folder=workchain.outputs.remote_folder,
-            computer=self.inputs.python.computer,
-        )
-        node = self.submit(PythonJob, **inputs)
-        self.report(f"launching PythonJob<{node.pk}> to reduce cube files")
+        node = self.submission_pythonjob_calc(workchain)
         return ToContext(reduce_calc_ildos=node)
 
     def should_run_stm(self):
@@ -1148,32 +738,50 @@ class PPWorkChain(WorkChain):
             elif prop == "calc_ldos_grid":
                 if self.ctx.calc_ldos_grid.is_finished_ok:
                     if self.inputs.parameters.get("reduce_cube_files"):
-                        # volumetric_data = self.ctx[
-                        #     "reduce_calc_ldos_grid"
-                        # ].outputs.results.get("aiida_fileout")
-                        # array = orm.ArrayData()
-                        # array.set_array("data", np.array(volumetric_data))
-                        # array.store()
-                        # output = {}
-                        # output["output_data"] = array
-                        # output["remote_folder"] = self.ctx[
-                        #     "calc_ldos_grid"
-                        # ].outputs.remote_folder
-                        # output["retrieved"] = self.ctx[
-                        #     "calc_ldos_grid"
-                        # ].outputs.retrieved
-                        # output["output_parameters"] = self.ctx[
-                        #     "calc_ldos_grid"
-                        # ].outputs.output_parameters
-                        # self.out("ldos_grid", output)
-                    else:
-                        self.out_many(
-                            self.exposed_outputs(
-                                self.ctx["calc_ldos_grid"],
-                                PpCalculation,
-                                namespace="ldos_grid",
+                        volumetric_data = self.ctx[
+                            "reduce_calc_ldos_grid"
+                        ].outputs.results
+
+                        if "aiida_fileout" in volumetric_data:
+                            array = orm.ArrayData()
+                            array.set_array(
+                                "data", np.array(volumetric_data["aiida_fileout"])
                             )
-                        )
+                            array.store()
+                            output = {}
+                            output["output_data"] = array
+                            output["remote_folder"] = (
+                                self.ctx.calc_ldos_grid.outputs.remote_folder
+                            )
+                            output["retrieved"] = (
+                                self.ctx.calc_ldos_grid.outputs.retrieved
+                            )
+                            output["output_parameters"] = (
+                                self.ctx.calc_ldos_grid.outputs.output_parameters
+                            )
+                            self.out("ldos_grid", output)
+
+                        else:
+                            output = {}
+                            output["output_data_multiple"] = {}
+                            output["retrieved"] = (
+                                self.ctx.calc_ldos_grid.outputs.retrieved
+                            )
+                            output["output_parameters"] = (
+                                self.ctx.calc_ldos_grid.outputs.output_parameters
+                            )
+                            output["remote_folder"] = (
+                                self.ctx.calc_ldos_grid.outputs.remote_folder
+                            )
+                            for key, value in volumetric_data.items():
+                                array = orm.ArrayData()
+                                array.set_array("data", np.array(value))
+                                array.store()
+                                output["output_data_multiple"][key] = array
+
+                            self.out("ldos_grid", output)
+                    else:
+                        self.out("ldos_grid", self.ctx.calc_ldos_grid.outputs)
                 else:
                     self.report("LDOS Grid calculation failed")
                     failed = True

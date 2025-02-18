@@ -96,18 +96,22 @@ def get_builder(codes, structure, parameters):
     ]
     lsign = parameters["pp"]["lsign"]
 
+    # Fermi level
+    fermi = aiida_node.outputs.output_parameters.get_dict()["fermi_energy"]
+
     # Parameters
     pp_parameters = {
         "charge_dens": {"spin_component": parameters["pp"]["charge_dens"]},
         "ildos": {
-            "emin": parameters["pp"]["ildos_emin"],
-            "emax": parameters["pp"]["ildos_emax"],
+            "emin": parameters["pp"]["ildos_emin"] + fermi,
+            "emax": parameters["pp"]["ildos_emax"] + fermi,
             "ildos_spin_component": parameters["pp"]["ildos_spin_component"],
         },
         "ldos_grid": {
-            "emin": parameters["pp"]["ldos_emin"],
-            "emax": parameters["pp"]["ldos_emax"],
+            "emin": parameters["pp"]["ldos_emin"] + fermi,
+            "emax": parameters["pp"]["ldos_emax"] + fermi,
             "delta_e": parameters["pp"]["ldos_delta_e"],
+            "degauss_ldos": parameters["pp"]["degauss_ldos"],
         },
         "stm": {
             "sample_bias": parameters["pp"]["stm_sample_bias"],
@@ -123,6 +127,10 @@ def get_builder(codes, structure, parameters):
             "lsign": lsign,
         },
         "reduce_cube_files": parameters["pp"]["reduce_cube_files"],
+        "ildos_stm": {
+            "heights": parameters["pp"]["ildos_stm_heights"],
+            "currents": parameters["pp"]["ildos_stm_currents"],
+        },
     }
     properties = orm.List(list=properties_list)
     parameters = orm.Dict(dict=pp_parameters)

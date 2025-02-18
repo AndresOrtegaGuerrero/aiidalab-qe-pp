@@ -22,7 +22,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         "weas-widget==0.1.25",
-        "aiida-pythonjob",
+        "aiida-pythonjob==0.1.8",
         "scikit-image",
     ],
     extras_require={

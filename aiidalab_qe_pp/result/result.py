@@ -12,6 +12,9 @@ from aiidalab_qe_pp.result.widgets.stmvisualwidget import STMVisualWidget
 from aiidalab_qe_pp.result.widgets.wfnvisualwidget import WfnVisualWidget
 from aiidalab_qe_pp.result.widgets.wfnvisualmodel import WfnVisualModel
 
+from aiidalab_qe_pp.result.widgets.ldos3dvisualwidget import Ldos3DVisualWidget
+from aiidalab_qe_pp.result.widgets.ldos3dvisualmodel import Ldos3DVisualModel
+
 
 class PpResultsPanel(ResultsPanel[PpResultsModel]):
     title = "Post-processing"
@@ -99,11 +102,10 @@ class PpResultsPanel(ResultsPanel[PpResultsModel]):
         needs_ldos = self._model.needs_ldos_tab()
         if needs_ldos:
             node = self._model.fetch_child_process_node()
-            cube_data = pp_node.ldos_grid.output_data.get_array("data")
-            plot_num = "ldos_grid"
-            cube_visual_model = CubeVisualModel()
-            cube_visual_widget = CubeVisualWidget(
-                cube_visual_model, node, cube_data, plot_num
+            cube_visual_model = Ldos3DVisualModel()
+            cube_visual_widget = Ldos3DVisualWidget(
+                cube_visual_model,
+                node,
             )
             tab_data.append(("LDOS", cube_visual_widget))
 
