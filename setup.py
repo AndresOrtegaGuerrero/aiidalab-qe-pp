@@ -21,7 +21,7 @@ setup(
     classifiers=[],
     packages=find_packages(),
     install_requires=[
-        "weas-widget==0.1.20",
+        "weas-widget==0.1.25",
         "aiida-pythonjob",
         "scikit-image",
     ],

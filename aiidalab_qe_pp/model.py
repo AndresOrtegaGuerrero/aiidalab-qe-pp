@@ -45,6 +45,7 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
     calc_ildos = tl.Bool(False)
     calc_stm = tl.Bool(False)
     calc_potential = tl.Bool(False)
+    calc_ldos_grid = tl.Bool(False)
 
     disable_calc_charge_dens = tl.Bool(False)
     disable_calc_spin_dens = tl.Bool(False)
@@ -52,6 +53,7 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
     disable_calc_ildos = tl.Bool(False)
     disable_calc_stm = tl.Bool(False)
     disable_calc_potential = tl.Bool(False)
+    disable_calc_ldos_grid = tl.Bool(False)
 
     charge_dens = tl.Int(0)
     charge_dens_options = tl.List(
@@ -68,6 +70,11 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
     ildos_spin_component_options_displayed = tl.Unicode("none")
     pwcalc_avail_displayed = tl.Unicode("block")
     wfn_options_displayed = tl.Unicode("none")
+    ldos_options_displayed = tl.Unicode("none")
+
+    ldos_emin = tl.Float(0)
+    ldos_emax = tl.Float(0)
+    ldos_delta_e = tl.Float(0.1)
 
     ildos_emin = tl.Float(0)
     ildos_emax = tl.Float(0)
@@ -185,6 +192,12 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
         else:
             self.charge_dens_options_displayed = "none"
 
+    def on_change_calc_ldos_grid(self, _=None):
+        if self.calc_ldos_grid:
+            self.ldos_options_displayed = "block"
+        else:
+            self.ldos_options_displayed = "none"
+
     def on_change_calc_stm(self, _=None):
         if self.calc_stm:
             self.stm_options_displayed = "block"
@@ -214,6 +227,7 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
         self.disable_calc_ildos = True
         self.disable_calc_stm = True
         self.disable_calc_potential = True
+        self.disable_calc_ldos_grid = True
 
     def enable_all_calcs(self):
         self.disable_calc_charge_dens = False
@@ -222,6 +236,7 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
         self.disable_calc_ildos = False
         self.disable_calc_stm = False
         self.disable_calc_potential = False
+        self.disable_calc_ldos_grid = False
 
     def update_kpoints_info(self, list_kpoints):
         """Update table with the kpoints. Number - (kx,ky,kz).  list_kpoints"""
@@ -356,6 +371,10 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
             "calc_wfn": self.calc_wfn,
             "calc_ildos": self.calc_ildos,
             "calc_stm": self.calc_stm,
+            "calc_ldos_grid": self.calc_ldos_grid,
+            "ldos_emin": self.ldos_emin,
+            "ldos_emax": self.ldos_emax,
+            "ldos_delta_e": self.ldos_delta_e,
             "charge_dens": self.charge_dens,
             "ildos_emin": self.ildos_emin,
             "ildos_emax": self.ildos_emax,
@@ -379,6 +398,10 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
         self.calc_wfn = parameters.get("calc_wfn", False)
         self.calc_ildos = parameters.get("calc_ildos", False)
         self.calc_stm = parameters.get("calc_stm", False)
+        self.calc_ldos_grid = parameters.get("calc_ldos_grid", False)
+        self.ldos_emin = parameters.get("ldos_emin", 0)
+        self.ldos_emax = parameters.get("ldos_emax", 0)
+        self.ldos_delta_e = parameters.get("ldos_delta_e", 0.1)
         self.charge_dens = parameters.get("charge_dens", 0)
         self.ildos_emin = parameters.get("ildos_emin", 0)
         self.ildos_emax = parameters.get("ildos_emax", 0)

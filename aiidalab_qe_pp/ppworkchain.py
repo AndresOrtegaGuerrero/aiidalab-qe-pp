@@ -51,6 +51,13 @@ def get_parameters(calc_type: str, settings: dict) -> orm.Dict:
         "potential": {
             "plot_num": 11,
         },
+        "ldos_grid": {
+            "plot_num": 3, 
+            "extra_params":{
+                "emin": settings.get("emin", 0),
+                "emax": settings.get("emax", 0),
+                "delta_e": settings.get("delta_e", 0.1),
+            },
     }
 
     config = calc_config.get(calc_type, {})
@@ -196,6 +203,13 @@ class PPWorkChain(WorkChain):
                     cls.reduce_potential,
                 ),
             ),
+            if_(cls.should_run_ldos_grid)(
+                cls.run_ldos_grid,
+                cls.inspect_ldos_grid,
+                if_(cls.should_reduce_ldos_grid)(
+                    cls.reduce_ldos_grid,
+                ),
+            ),
             if_(cls.should_run_wfn)(
                 cls.run_wfn,
                 cls.inspect_wfn,
@@ -283,6 +297,11 @@ class PPWorkChain(WorkChain):
         )
         spec.exit_code(
             207, "ERROR_POTENTIAL_FAILED", message="The potential calculation failed."
+        )
+        spec.exit_code(
+            208,
+            "ERROR_LDOS_GRID_FAILED",
+            message="The LDOS Grid calculation failed.",
         )
 
     @classmethod
@@ -629,6 +648,108 @@ class PPWorkChain(WorkChain):
         node = self.submit(PythonJob, **inputs)
         self.report(f"launching PythonJob<{node.pk}> to reduce cube files")
         return ToContext(reduce_calc_potential=node)
+
+
+    def should_run_ldos_grid(self):
+        return "calc_ldos_grid" in self.inputs.properties
+
+    def run_ldos_grid(self):
+        inputs = AttributeDict(self.exposed_inputs(PpCalculation, namespace="pp_calc"))
+        inputs.parent_folder = self.inputs.parent_folder
+        ldos_grid_parameters = get_parameters("ldos_grid", self.inputs.parameters["ldos_grid"])
+        inputs.parameters = ldos_grid_parameters
+        if self.inputs.parameters["reduce_cube_files"]:
+            inputs.metadata.options.parse_data_files = False
+        running = self.submit(PpCalculation, **inputs)
+        self.report(f"launching LDOS Grid PpCalculation<{running.pk}>")
+        return ToContext(calc_ldos_grid=running)
+
+    def inspect_ldos_grid(self):
+        """Inspect the results of the LDOS Grid calculation."""
+        calculation = self.ctx.calc_ldos_grid
+
+        if not calculation.is_finished_ok:
+            self.report(
+                f"LDOS Grid PpCalculation failed with exit status {calculation.exit_status}"
+            )
+            return self.exit_codes.ERROR_LDOS_GRID_FAILED
+
+    def should_reduce_ldos_grid(self):
+        return self.inputs.parameters.get("reduce_cube_files")
+
+    def reduce_ldos_grid(self):
+        workchain = self.ctx.calc_ldos_grid
+
+        def process_cube_files():
+            import os
+            import numpy as np
+            from pymatgen.io.common import VolumetricData
+            from skimage.transform import resize
+            from skimage.metrics import structural_similarity as ssim
+
+            def optimal_scaling_factor(
+                data, min_factor=0.1, max_factor=1.0, step=0.1, threshold=0.99
+            ):
+                """
+                Determine the optimal scaling factor for downsampling 3D data without significant loss of information.
+                """
+                original_shape = data.shape
+                best_factor = max_factor
+                # best_ssim = 1.0
+
+                for factor in np.arange(max_factor, min_factor, -step):
+                    new_shape = tuple(
+                        max(1, int(dim * factor)) for dim in original_shape
+                    )
+                    resized_data = resize(
+                        data, new_shape, anti_aliasing=True
+                    )  # Upsample back to original shape for comparison
+                    upsampled_data = resize(
+                        resized_data, original_shape, anti_aliasing=True
+                    )
+                    current_ssim = ssim(
+                        data, upsampled_data, data_range=data.max() - data.min()
+                    )  # Compute structural_similarity between the original and upsampled data
+
+                    if current_ssim >= threshold:
+                        best_factor = factor
+                        # best_ssim = current_ssim
+                    else:
+                        break
+
+                return best_factor
+
+            folder = "parent_folder"
+            results = {}
+            for filename in os.listdir(folder):
+                if filename.endswith(".fileout"):
+                    filepath = os.path.join(folder, filename)
+                    volumetric_data = VolumetricData.from_cube(filepath)
+                    data = volumetric_data.data["total"]
+                    scaling_factor = optimal_scaling_factor(data)
+                    new_shape = tuple(int(dim * scaling_factor) for dim in data.shape)
+                    resized_data = resize(data, new_shape, anti_aliasing=True).tolist()
+
+                    if "aiida.fileout" == filename:
+                        results["aiida_fileout"] = resized_data
+                    else:
+                        kpoint_band = "_".join(
+                            filename.split("aiida")[1].split("_")[1:]
+                        )
+                        results[kpoint_band] = resized_data
+
+            return results
+
+        inputs = prepare_pythonjob_inputs(
+            process_cube_files,
+            code=self.inputs.python,
+            function_outputs=[{"name": "results"}],
+            parent_folder=workchain.outputs.remote_folder,
+            computer=self.inputs.python.computer,
+        )
+        node = self.submit(PythonJob, **inputs)
+        self.report(f"launching PythonJob<{node.pk}> to reduce cube files")
+        return ToContext(reduce_calc_ldos_grid=node)
 
     def should_run_wfn(self):
         return "calc_wfn" in self.inputs.properties
@@ -993,7 +1114,7 @@ class PPWorkChain(WorkChain):
         """Attach the results of the PPWorkChain to the outputs."""
         failed = False
         for prop in self.inputs.properties:
-            if prop not in ["calc_wfn", "calc_stm"]:
+            if prop not in ["calc_wfn", "calc_stm", "calc_ldos_grid"]:
                 if self.ctx[f"{prop}"].is_finished_ok:
                     if self.inputs.parameters.get("reduce_cube_files"):
                         volumetric_data = self.ctx[
@@ -1023,6 +1144,40 @@ class PPWorkChain(WorkChain):
                 else:
                     self.report(f"{prop[5:]} calculation failed")
                     failed = True
+
+            elif prop == "calc_ldos_grid":
+                if self.ctx.calc_ldos_grid.is_finished_ok:
+                    if self.inputs.parameters.get("reduce_cube_files"):
+                        # volumetric_data = self.ctx[
+                        #     "reduce_calc_ldos_grid"
+                        # ].outputs.results.get("aiida_fileout")
+                        # array = orm.ArrayData()
+                        # array.set_array("data", np.array(volumetric_data))
+                        # array.store()
+                        # output = {}
+                        # output["output_data"] = array
+                        # output["remote_folder"] = self.ctx[
+                        #     "calc_ldos_grid"
+                        # ].outputs.remote_folder
+                        # output["retrieved"] = self.ctx[
+                        #     "calc_ldos_grid"
+                        # ].outputs.retrieved
+                        # output["output_parameters"] = self.ctx[
+                        #     "calc_ldos_grid"
+                        # ].outputs.output_parameters
+                        # self.out("ldos_grid", output)
+                    else:
+                        self.out_many(
+                            self.exposed_outputs(
+                                self.ctx["calc_ldos_grid"],
+                                PpCalculation,
+                                namespace="ldos_grid",
+                            )
+                        )
+                else:
+                    self.report("LDOS Grid calculation failed")
+                    failed = True
+
             elif prop == "calc_wfn":
                 wfn_found = False
                 wfn_outputs = {}

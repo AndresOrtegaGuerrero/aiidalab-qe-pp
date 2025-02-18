@@ -158,6 +158,21 @@ class PpConfigurationSettingPanel(
             "value",
         )
 
+        # LDOS grid Calculation
+        self.calc_ldos_grid = ipw.Checkbox(
+            description="Local density of states at specific energies ",
+            indent=False,
+            style={"description_width": "initial"},
+        )
+        ipw.link((self._model, "calc_ldos_grid"), (self.calc_ldos_grid, "value"))
+        ipw.link(
+            (self._model, "disable_calc_ldos_grid"), (self.calc_ldos_grid, "disabled")
+        )
+        self.calc_ldos_grid.observe(
+            self._on_change_calc_ldos_grid,
+            "value",
+        )
+
         # Spin Density Calculation
         self.calc_spin_dens = ipw.Checkbox(
             description="Spin density",
@@ -298,6 +313,43 @@ class PpConfigurationSettingPanel(
             (self.wfn_options.layout, "display"),
         )
 
+        # Calc LDOS Options
+
+        self.ldos_emin = ipw.FloatText(
+            description="Emin (eV):",
+            style={"description_width": "initial"},
+            layout=ipw.Layout(width="fit-content"),
+        )
+        ipw.link((self._model, "ldos_emin"), (self.ldos_emin, "value"))
+
+        self.ldos_emax = ipw.FloatText(
+            description="Emax (eV):",
+            style={"description_width": "initial"},
+            layout=ipw.Layout(width="fit-content"),
+        )
+        ipw.link((self._model, "ldos_emax"), (self.ldos_emax, "value"))
+
+        self.ldos_delta_e = ipw.FloatText(
+            description="Spacing of energy grid (eV):",
+            style={"description_width": "initial"},
+            layout=ipw.Layout(width="fit-content"),
+        )
+        ipw.link((self._model, "ldos_delta_e"), (self.ldos_delta_e, "value"))
+
+        self.ldos_parameters = ipw.HBox(
+            [
+                self.ldos_emin,
+                self.ldos_emax,
+                self.ldos_delta_e,
+            ]
+        )
+
+        ipw.link(
+            (self._model, "ldos_options_displayed"),
+            (self.ldos_parameters.layout, "display"),
+        )
+
+
         # Calc ILDOS Options
         self.ildos_emin = ipw.FloatText(
             description="Emin (eV):",
@@ -403,6 +455,8 @@ class PpConfigurationSettingPanel(
             self.charge_dens_options,
             self.calc_spin_dens,
             self.calc_potential,
+            self.calc_ldos_grid,
+            self.ldos_parameters,
             self.calc_wfn,
             self.wfn_options,
             self.calc_ildos,
@@ -441,3 +495,6 @@ class PpConfigurationSettingPanel(
 
     def _on_change_calc_wfn(self, _):
         self._model.on_change_calc_wfn()
+
+    def _on_change_calc_ldos_grid(self, _):
+        self._model.on_change_calc_ldos_grid()

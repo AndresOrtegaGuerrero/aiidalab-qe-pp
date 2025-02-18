@@ -104,6 +104,11 @@ def get_builder(codes, structure, parameters):
             "emax": parameters["pp"]["ildos_emax"],
             "ildos_spin_component": parameters["pp"]["ildos_spin_component"],
         },
+        "ldos_grid": {
+            "emin": parameters["pp"]["ldos_emin"],
+            "emax": parameters["pp"]["ldos_emax"],
+            "delta_e": parameters["pp"]["ldos_delta_e"],
+        },
         "stm": {
             "sample_bias": parameters["pp"]["stm_sample_bias"],
             "heights": parameters["pp"]["stm_heights"],
