@@ -59,6 +59,7 @@ def get_parameters(calc_type: str, settings: dict) -> orm.Dict:
                 "emax": settings.get("emax", 0),
                 "delta_e": settings.get("delta_e", 0.1),
                 "degauss_ldos": settings.get("degauss_ldos", 0.01),
+                "use_gauss_ldos": settings.get("use_gauss_ldos", False),
             },
         },
     }
@@ -91,10 +92,7 @@ def parse_stm_parameters(settings: dict) -> dict:
         raise ValueError("Invalid STM parameters")
 
     # Change eV to Rydberg
-    sample_bias_list = [bias / 13.6056980659 for bias in sample_bias_list]
-
-    # What about number expressed as 10^(-3) ?
-    # currents_list = [current / 6623618237.5082 for current in currents_list]
+    sample_bias_list = [-bias / 13.6056980659 for bias in sample_bias_list]
 
     return {
         "sample_bias": sample_bias_list,
@@ -117,15 +115,7 @@ def create_valid_link_label(value):
     1. Converting the value to a string (if necessary).
     2. Handling negative values by prepending "neg_".
     3. Replacing any non-alphanumeric characters with underscores.
-
-    Args:
-        value: The value to incorporate into the link label.
-
-    Returns:
-        str: The corrected and valid link label.
     """
-
-    # Ensure value is a string
     if not isinstance(value, str):
         value = str(value)
 
@@ -133,12 +123,9 @@ def create_valid_link_label(value):
     prefix = ""
     if value.startswith("-"):
         prefix = "neg_"  # Prepend "neg_" for negative values
-        value = value[1:]  # Remove the leading hyphen
+        value = value[1:]
 
-    # Replace . with _
     valid_label = prefix + value.replace(".", "_")
-
-    # Remove any remaining non-alphanumeric characters
     valid_label = "".join(char for char in valid_label if char.isalnum() or char == "_")
 
     return valid_label
@@ -226,6 +213,10 @@ class PPWorkChain(WorkChain):
                 if_(cls.should_reduce_ildos)(
                     cls.reduce_ildos,
                 ),
+                if_(cls.should_run_ildos_stm)(
+                    cls.run_ildos_stm,
+                    cls.inspect_ildos_stm,
+                ),
             ),
             if_(cls.should_run_stm)(
                 cls.run_stm,
@@ -276,6 +267,7 @@ class PPWorkChain(WorkChain):
         spec.output_namespace("stm", dynamic=True)
         spec.output_namespace("wfn", dynamic=True)
         spec.output_namespace("ldos_grid", dynamic=True)
+        spec.output_namespace("ildos_stm", dynamic=True)
 
         spec.exit_code(
             201,
@@ -378,6 +370,20 @@ class PPWorkChain(WorkChain):
         node = self.submit(PythonJob, **inputs)
         self.report(f"launching PythonJob<{node.pk}> to reduce cube files")
         return node
+
+    def submit_critic2_calculation(self, remote_folder, calc_type, mode, value, label):
+        inputs = AttributeDict(
+            self.exposed_inputs(Critic2Calculation, namespace="critic2_calc")
+        )
+        inputs.parent_folder = remote_folder
+        inputs.parameters = orm.Dict(dict={"mode": mode, "value": value})
+        inputs.metadata.label = f"{calc_type}_{mode}_{label}"
+        inputs.metadata.call_link_label = f"{calc_type}_{mode}_{label}"
+        running = self.submit(Critic2Calculation, **inputs)
+        self.report(
+            f"Launching STM Critic2Calculation<{running.pk}> {calc_type}_{mode}_{label}"
+        )
+        self.to_context(**{f"{calc_type}_{mode}_{label}": running})
 
     def should_run_charge_dens(self):
         return "calc_charge_dens" in self.inputs.properties
@@ -572,6 +578,43 @@ class PPWorkChain(WorkChain):
         workchain = self.ctx.calc_ildos
         node = self.submission_pythonjob_calc(workchain)
         return ToContext(reduce_calc_ildos=node)
+
+    def should_run_ildos_stm(self):
+        return "calc_ildos_stm" in self.inputs.properties
+
+    def run_ildos_stm(self):
+        ildos_stm = self.inputs.parameters["ildos_stm"]
+        ildos_stm["bias"] = ""
+        stm_parameters = parse_stm_parameters(ildos_stm)
+
+        remote_folder = self.ctx.calc_ildos.outputs.remote_folder
+        if stm_parameters["heights"]:
+            for height in stm_parameters.get("heights", []):
+                height_label = str(height).replace(".", "_")
+                z_axis = self.inputs.structure.cell_lengths[2]
+                self.submit_critic2_calculation(
+                    remote_folder, "ildos_stm", "height", height / z_axis, height_label
+                )
+        if stm_parameters["currents"]:
+            for current in stm_parameters.get("currents", []):
+                current_label = create_valid_link_label(current)
+                self.submit_critic2_calculation(
+                    remote_folder, "ildos_stm", "current", current, current_label
+                )
+
+    def inspect_ildos_stm(self):
+        """Inspect the results of the ILDOS STM calculations."""
+        failed_runs = []
+        for label, workchain in self.ctx.items():
+            if label.startswith("ildos_stm"):
+                if not workchain.is_finished_ok:
+                    self.report(
+                        f"ILDOS STM Critic2Calculation {label} failed with exit status {workchain.exit_status}"
+                    )
+                    failed_runs.append(label)
+        if failed_runs:
+            self.report("one or more workchains did not finish succesfully")
+            return self.exit_codes.ERROR_STM_FAILED
 
     def should_run_stm(self):
         return "calc_stm" in self.inputs.properties
@@ -841,26 +884,74 @@ class PPWorkChain(WorkChain):
                         "No workchains found for 'calc_wfn' with labels starting with 'wfn_'"
                     )
 
-            elif prop == "calc_stm":
-                stm_found = False
-                stm_outputs = {}
+            elif prop in ("calc_stm", "calc_ildos_stm"):
+                output_label = prop[5:]  # Removes "calc_" prefix
+                prefix = f"{output_label}_"  # Prefix for filtering workchains
+
+                found = False
+                outputs = {}
+
                 for label, workchain in self.ctx.items():
-                    if label.startswith("stm_"):
-                        stm_found = True
+                    if label.startswith(prefix):
+                        found = True
                         if workchain.is_finished_ok:
-                            stm_outputs[label] = {}
-                            process = getattr(self.ctx, label)
-                            for key in process.outputs._get_keys():
-                                stm_outputs[label][key] = getattr(process.outputs, key)
+                            outputs[label] = {
+                                key: getattr(workchain.outputs, key)
+                                for key in workchain.outputs._get_keys()
+                            }
                         else:
                             self.report(f"{label} calculation failed")
                             failed = True
-                self.out("stm", stm_outputs)
 
-                if not stm_found:
+                self.out(output_label, outputs)
+
+                if not found:
                     self.report(
-                        "No workchains found for 'calc_stm' with labels starting with 'stm_'"
+                        f"No workchains found for '{prop}' with labels starting with '{prefix}'"
                     )
+
+            # elif prop == "calc_stm":
+            #     stm_found = False
+            #     stm_outputs = {}
+            #     for label, workchain in self.ctx.items():
+            #         if label.startswith("stm_"):
+            #             stm_found = True
+            #             if workchain.is_finished_ok:
+            #                 stm_outputs[label] = {}
+            #                 process = getattr(self.ctx, label)
+            #                 for key in process.outputs._get_keys():
+            #                     stm_outputs[label][key] = getattr(process.outputs, key)
+            #             else:
+            #                 self.report(f"{label} calculation failed")
+            #                 failed = True
+            #     self.out("stm", stm_outputs)
+
+            #     if not stm_found:
+            #         self.report(
+            #             "No workchains found for 'calc_stm' with labels starting with 'stm_'"
+            #         )
+            # elif prop == "calc_ildos_stm":
+            #     ildos_stm_found = False
+            #     ildos_stm_outputs = {}
+            #     for label, workchain in self.ctx.items():
+            #         if label.startswith("ildos_stm_"):
+            #             ildos_stm_found = True
+            #             if workchain.is_finished_ok:
+            #                 ildos_stm_outputs[label] = {}
+            #                 process = getattr(self.ctx, label)
+            #                 for key in process.outputs._get_keys():
+            #                     ildos_stm_outputs[label][key] = getattr(
+            #                         process.outputs, key
+            #                     )
+            #             else:
+            #                 self.report(f"{label} calculation failed")
+            #                 failed = True
+            #     self.out("ildos_stm", ildos_stm_outputs)
+
+            #     if not ildos_stm_found:
+            #         self.report(
+            #             "No workchains found for 'calc_ildos_stm' with labels starting with 'ildos_stm_'"
+            #         )
 
         if failed:
             return self.exit_codes.ERROR_SUB_PROCESS_FAILED

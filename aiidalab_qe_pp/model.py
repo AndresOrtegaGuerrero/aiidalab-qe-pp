@@ -77,6 +77,7 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
     ldos_emax = tl.Float(0)
     ldos_delta_e = tl.Float(0.1)
     degauss_ldos = tl.Float(0.01)
+    use_gauss_ldos = tl.Bool(False)
 
     ildos_emin = tl.Float(0)
     ildos_emax = tl.Float(0)
@@ -387,6 +388,7 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
             "ldos_emax": self.ldos_emax,
             "ldos_delta_e": self.ldos_delta_e,
             "degauss_ldos": self.degauss_ldos,
+            "use_gauss_ldos": self.use_gauss_ldos,
             "charge_dens": self.charge_dens,
             "ildos_emin": self.ildos_emin,
             "ildos_emax": self.ildos_emax,
@@ -418,6 +420,7 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
         self.ldos_emax = parameters.get("ldos_emax", 0)
         self.ldos_delta_e = parameters.get("ldos_delta_e", 0.1)
         self.degauss_ldos = parameters.get("degauss_ldos", 0.01)
+        self.use_gauss_ldos = parameters.get("use_gauss_ldos", False)
         self.charge_dens = parameters.get("charge_dens", 0)
         self.ildos_emin = parameters.get("ildos_emin", 0)
         self.ildos_emax = parameters.get("ildos_emax", 0)

@@ -350,12 +350,20 @@ class PpConfigurationSettingPanel(
         )
         ipw.link((self._model, "degauss_ldos"), (self.degauss_ldos, "value"))
 
+        self.use_gauss_ldos = ipw.Checkbox(
+            description="Use Gaussian broadening",
+            indent=True,
+            style={"description_width": "initial"},
+        )
+        ipw.link((self._model, "use_gauss_ldos"), (self.use_gauss_ldos, "value"))
+
         self.ldos_parameters = ipw.HBox(
             [
                 self.ldos_emin,
                 self.ldos_emax,
                 self.ldos_delta_e,
                 self.degauss_ldos,
+                self.use_gauss_ldos,
             ]
         )
 

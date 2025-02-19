@@ -21,7 +21,10 @@ class Ldos3DVisualModel(Model):
     reduce_cube_files = tl.Bool(False)
     error_message = tl.Unicode("")
 
-    ldos_files_list_options = tl.List()
+    # calc_node_options = tl.List(trait=tl.List(tl.Union([tl.Unicode(), tl.Unicode()])), default_value=[])
+    ldos_files_list_options = tl.List(
+        trait=tl.List(tl.Union([tl.Unicode(), tl.Unicode()])), default_value=[]
+    )  # tl.List()
     ldos_file = tl.Unicode()
 
     def fetch_data(self):
@@ -30,13 +33,28 @@ class Ldos3DVisualModel(Model):
         self.reduce_cube_files = self.node.inputs.parameters.get(
             "reduce_cube_files", False
         )
-        self.ldos_files_list_options = list(
-            self.node.outputs.ldos_grid.output_data_multiple.keys()
-        )
-        self.ldos_file = self.ldos_files_list_options[0]
+        self.ldos_files_list_options = self.get_ldos_files_list_options()
+
+        # list(
+        #    self.node.outputs.ldos_grid.output_data_multiple.keys()
+        # )
+        self.ldos_file = self.ldos_files_list_options[0][1]
         self.cube_data = self.node.outputs.ldos_grid.output_data_multiple[
             self.ldos_file
         ].get_array("data")
+
+    def get_ldos_files_list_options(self):
+        import re
+
+        pattern = r"^\s*Energy\s*=.*"
+        aiida_out = self.node.outputs.ldos_grid.retrieved.get_object_content(
+            "aiida.out"
+        )
+        description_list = [
+            match.strip() for match in re.findall(pattern, aiida_out, re.MULTILINE)
+        ]
+        keys = list(self.node.outputs.ldos_grid.output_data_multiple.keys())
+        return list(zip(description_list, keys))
 
     def update_plot(self):
         self.cube_data = self.node.outputs.ldos_grid.output_data_multiple[

@@ -112,6 +112,7 @@ def get_builder(codes, structure, parameters):
             "emax": parameters["pp"]["ldos_emax"] + fermi,
             "delta_e": parameters["pp"]["ldos_delta_e"],
             "degauss_ldos": parameters["pp"]["degauss_ldos"],
+            "use_gauss_ldos": parameters["pp"]["use_gauss_ldos"],
         },
         "stm": {
             "sample_bias": parameters["pp"]["stm_sample_bias"],
@@ -131,6 +132,7 @@ def get_builder(codes, structure, parameters):
             "heights": parameters["pp"]["ildos_stm_heights"],
             "currents": parameters["pp"]["ildos_stm_currents"],
         },
+        "fermi": fermi,
     }
     properties = orm.List(list=properties_list)
     parameters = orm.Dict(dict=pp_parameters)

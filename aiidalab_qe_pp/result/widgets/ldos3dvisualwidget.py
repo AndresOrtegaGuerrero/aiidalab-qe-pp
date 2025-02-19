@@ -37,7 +37,7 @@ class Ldos3DVisualWidget(ipw.VBox):
         self.ldos_files_list = ipw.Dropdown(
             description="Ldos files:",
             style={"description_width": "initial"},
-            layout={"width": "150px"},
+            layout={"width": "500px"},
         )
         ipw.dlink(
             (self._model, "ldos_files_list_options"),
