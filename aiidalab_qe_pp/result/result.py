@@ -93,6 +93,14 @@ class PpResultsPanel(ResultsPanel[PpResultsModel]):
             )
             tab_data.append(("ILDOS", cube_visual_widget))
 
+        needs_ildos_stm = self._model.needs_ildos_stm_tab()
+        if needs_ildos_stm:
+            ildos_stm_visual_model = STMVisualModel()
+            ildos_stm_visual_widget = STMVisualWidget(
+                ildos_stm_visual_model, pp_node["ildos_stm"]
+            )
+            tab_data.append(("ILDOS STM", ildos_stm_visual_widget))
+
         needs_stm = self._model.needs_stm_tab()
         if needs_stm:
             stm_visual_model = STMVisualModel()
