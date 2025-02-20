@@ -56,3 +56,63 @@ def resized_cube_files(folder: str = "parent_folder"):
                 results[label] = resized_data
 
     return results
+
+
+def download_remote_file(remote_folder, temp_file_name, file_download):
+    import os
+    import threading
+    import time
+    from IPython.display import display, Javascript
+
+    jupyter_dir = "/home/jovyan"
+    os.makedirs(jupyter_dir, exist_ok=True)
+
+    temp_file_path = os.path.join(jupyter_dir, temp_file_name)
+
+    try:
+        remote_folder.getfile(file_download, temp_file_path)
+
+        # Ensure file exists and is not empty
+        if not os.path.exists(temp_file_path) or os.path.getsize(temp_file_path) == 0:
+            print("ERROR: Downloaded file is empty.")
+            return
+
+        jupyter_path = f"/files/{temp_file_name}"
+
+        js_download = Javascript(
+            f"""
+            var link = document.createElement('a');
+            link.href = "{jupyter_path}";
+            link.download = "{temp_file_name}";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            setTimeout(function() {{
+                fetch("{jupyter_path}", {{ method: 'HEAD' }})
+                .then(response => {{
+                    if (response.status === 404) {{
+                        console.log("File already deleted.");
+                    }} else {{
+                        fetch('/delete_file', {{
+                            method: 'POST',
+                            headers: {{ 'Content-Type': 'application/json' }},
+                            body: JSON.stringify({{'file_path': '{temp_file_path}'}})
+                        }})
+                        .then(response => console.log("File deletion request sent."));
+                    }}
+                }});
+            }}, 10000);  // Delete file after 10 seconds
+            """
+        )
+        display(js_download)
+
+        def delete_file():
+            time.sleep(60)
+            if os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+
+        threading.Thread(target=delete_file, daemon=True).start()
+
+    except Exception as e:
+        print(f"Error: {e}")

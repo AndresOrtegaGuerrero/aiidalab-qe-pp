@@ -6,11 +6,12 @@ import numpy as np
 from ase.atoms import Atoms
 from pymatgen.io.common import VolumetricData
 import base64
-from IPython.display import Javascript
-from IPython.display import display
+from IPython.display import display, Javascript
 import tempfile
 import os
 import threading
+
+from aiidalab_qe_pp.utils import download_remote_file
 
 
 class Ldos3DVisualModel(Model):
@@ -34,10 +35,6 @@ class Ldos3DVisualModel(Model):
             "reduce_cube_files", False
         )
         self.ldos_files_list_options = self.get_ldos_files_list_options()
-
-        # list(
-        #    self.node.outputs.ldos_grid.output_data_multiple.keys()
-        # )
         self.ldos_file = self.ldos_files_list_options[0][1]
         self.cube_data = self.node.outputs.ldos_grid.output_data_multiple[
             self.ldos_file
@@ -111,43 +108,14 @@ class Ldos3DVisualModel(Model):
             self.error_message = (
                 f'<div style="color: red; font-weight: bold;">{message}</div>'
             )
-            threading.Timer(3.0, self.clear_error_message).start()
+            threading.Timer(10.0, self.clear_error_message).start()
             return
 
-        with tempfile.NamedTemporaryFile(delete=False) as tmp:
-            temp_file_path = tmp.name
-
-        try:
-            file_download = f"aiida.filplot{self.ldos_file}aiida.fileout"
-            remote_folder.getfile(file_download, temp_file_path)
-
-            # Read the content of the temporary file
-            with open(temp_file_path, "rb") as file:
-                raw_bytes = file.read()
-
-            # Encode the file content to base64
-            base64_payload = base64.b64encode(raw_bytes).decode()
-
-            filename = f"plot_{self.ldos_file}"
-
-            # JavaScript to trigger download
-            filename = f"{filename}.cube"
-            js_download = Javascript(
-                f"""
-                var link = document.createElement('a');
-                link.href = "data:application/octet-stream;base64,{base64_payload}";
-                link.download = "{filename}";
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                """
-            )
-            display(js_download)
-
-        finally:
-            # Ensure the temporary file is deleted after the operation
-            if os.path.exists(temp_file_path):
-                os.remove(temp_file_path)
+        download_remote_file(
+            remote_folder,
+            f"plot_ldos_{self.ldos_file}.cube",
+            f"aiida.filplot{self.ldos_file}aiida.fileout",
+        )
 
     def clear_error_message(self):
         self.error_message = ""

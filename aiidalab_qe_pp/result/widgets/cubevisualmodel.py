@@ -12,6 +12,8 @@ from aiida.orm.nodes.process.workflow.workchain import WorkChainNode
 import numpy as np
 import threading
 
+from aiidalab_qe_pp.utils import download_remote_file
+
 
 class CubeVisualModel(Model):
     node = tl.Instance(WorkChainNode, allow_none=True)
@@ -80,42 +82,12 @@ class CubeVisualModel(Model):
             self.error_message = (
                 f'<div style="color: red; font-weight: bold;">{message}</div>'
             )
-            threading.Timer(3.0, self.clear_error_message).start()
+            threading.Timer(10.0, self.clear_error_message).start()
             return
 
-        with tempfile.NamedTemporaryFile(delete=False) as tmp:
-            temp_file_path = tmp.name
-
-        try:
-            remote_folder.getfile("aiida.fileout", temp_file_path)
-
-            # Read the content of the temporary file
-            with open(temp_file_path, "rb") as file:
-                raw_bytes = file.read()
-
-            # Encode the file content to base64
-            base64_payload = base64.b64encode(raw_bytes).decode()
-
-            filename = f"plot_{self.plot_num}"
-
-            # JavaScript to trigger download
-            filename = f"{filename}.cube"
-            js_download = Javascript(
-                f"""
-                var link = document.createElement('a');
-                link.href = "data:application/octet-stream;base64,{base64_payload}";
-                link.download = "{filename}";
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                """
-            )
-            display(js_download)
-
-        finally:
-            # Ensure the temporary file is deleted after the operation
-            if os.path.exists(temp_file_path):
-                os.remove(temp_file_path)
+        download_remote_file(
+            remote_folder, f"plot_{self.plot_num}.cube", "aiida.fileout"
+        )
 
     def clear_error_message(self):
         self.error_message = ""
