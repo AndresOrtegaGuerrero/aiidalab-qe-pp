@@ -14,7 +14,7 @@ SETTINGS = {
     "button_layer_1_height": 1.3,
     "width": 800,
     "height": 600,
-    "color_scales": ["Hot", "Cividis", "Greys", "Viridis"],
+    "color_scales": ["Hot", "Cividis", "Greys", "Viridis", "Electric"],
     "default_color_scale": "Hot",
 }
 
@@ -85,11 +85,12 @@ class STMVisualModel(Model):
     def update_plot(self):
         self._on_change_calc_node()
         # Clear existing data
+        current_colorscale = self.plot.data[0].colorscale
         self.plot.data = []
         # Add new heatmap trace
         new_data = self._update_data()  # This returns a list with a heatmap
         self.plot.add_traces(new_data)
-        self.update_layout(self.plot)
+        self.update_layout(self.plot, color_scale=current_colorscale)
 
     def update_plot_zmax(self):
         self.plot.data[0].update(zmax=self.zmax)
@@ -195,103 +196,105 @@ class STMVisualModel(Model):
         self.update_layout(fig)
         self.plot = go.FigureWidget(fig)
 
-    def update_layout(self, fig):
-        fig.update_layout(
-            # Title settings
-            title=dict(
-                text=f"Constant {self.mode} plot, {self.value} {'Å' if self.mode == 'height' else '(au)'}",
-                x=0.5,  # Center the title
-                y=0.85,  # Adjust the vertical position of the title
-                xanchor="center",
-                yanchor="top",
-            ),
-            # X-axis settings
-            xaxis=dict(
-                title="x (Å)",
-                range=[np.min(self.unique_x), np.max(self.unique_x)],
-                tickmode="auto",
-                ticks="outside",
-                showline=True,
-                mirror=True,
-                showgrid=False,
-            ),
-            # Y-axis settings
-            yaxis=dict(
-                title="y (Å)",
-                range=[np.min(self.unique_y), np.max(self.unique_y)],
-                tickmode="auto",
-                ticks="outside",
-                showline=True,
-                mirror=True,
-                showgrid=False,
-            ),
-            # General layout settings
-            autosize=False,
-            width=SETTINGS["width"],
-            height=SETTINGS["height"],
-            margin=SETTINGS["margin"],
-            # Update menus for interactivity
-            updatemenus=[
-                dict(
-                    buttons=[
-                        dict(
-                            args=["colorscale", colorscale],
-                            label=colorscale,
-                            method="restyle",
-                        )
-                        for colorscale in SETTINGS["color_scales"]
-                    ],
-                    direction="down",
-                    pad={"r": 10, "t": 10},
-                    showactive=True,
-                    x=0.1,
-                    xanchor="left",
-                    y=SETTINGS["button_layer_1_height"],
+    def update_layout(self, fig, color_scale=SETTINGS["default_color_scale"]):
+        with fig.batch_update():
+            fig.update_layout(
+                # Title settings
+                title=dict(
+                    text=f"Constant {self.mode} plot, {self.value} {'Å' if self.mode == 'height' else '(au)'}",
+                    x=0.5,  # Center the title
+                    y=0.85,  # Adjust the vertical position of the title
+                    xanchor="center",
                     yanchor="top",
                 ),
-                dict(
-                    buttons=[
-                        dict(
-                            args=["reversescale", False],
-                            label="False",
-                            method="restyle",
-                        ),
-                        dict(
-                            args=["reversescale", True],
-                            label="True",
-                            method="restyle",
-                        ),
-                    ],
-                    direction="down",
-                    pad={"r": 10, "t": 10},
-                    showactive=True,
-                    x=0.39,
-                    xanchor="left",
-                    y=SETTINGS["button_layer_1_height"],
-                    yanchor="top",
+                # X-axis settings
+                xaxis=dict(
+                    title="x (Å)",
+                    range=[np.min(self.unique_x), np.max(self.unique_x)],
+                    tickmode="auto",
+                    ticks="outside",
+                    showline=True,
+                    mirror=True,
+                    showgrid=False,
                 ),
-            ],
-            # Annotations for the layout
-            annotations=[
-                dict(
-                    text="Colorscale",
-                    x=-0.03,
-                    xref="paper",
-                    y=SETTINGS["button_layer_1_height"] - 0.05,
-                    yref="paper",
-                    align="left",
-                    showarrow=False,
+                # Y-axis settings
+                yaxis=dict(
+                    title="y (Å)",
+                    range=[np.min(self.unique_y), np.max(self.unique_y)],
+                    tickmode="auto",
+                    ticks="outside",
+                    showline=True,
+                    mirror=True,
+                    showgrid=False,
                 ),
-                dict(
-                    text="Reverse<br>Colorscale",
-                    x=0.26,
-                    xref="paper",
-                    y=SETTINGS["button_layer_1_height"] - 0.025,
-                    yref="paper",
-                    showarrow=False,
-                ),
-            ],
-        )
+                # General layout settings
+                autosize=False,
+                width=SETTINGS["width"],
+                height=SETTINGS["height"],
+                margin=SETTINGS["margin"],
+                # Update menus for interactivity
+                updatemenus=[
+                    dict(
+                        buttons=[
+                            dict(
+                                args=["colorscale", colorscale],
+                                label=colorscale,
+                                method="restyle",
+                            )
+                            for colorscale in SETTINGS["color_scales"]
+                        ],
+                        direction="down",
+                        pad={"r": 10, "t": 10},
+                        showactive=True,
+                        x=0.1,
+                        xanchor="left",
+                        y=SETTINGS["button_layer_1_height"],
+                        yanchor="top",
+                    ),
+                    dict(
+                        buttons=[
+                            dict(
+                                args=["reversescale", False],
+                                label="False",
+                                method="restyle",
+                            ),
+                            dict(
+                                args=["reversescale", True],
+                                label="True",
+                                method="restyle",
+                            ),
+                        ],
+                        direction="down",
+                        pad={"r": 10, "t": 10},
+                        showactive=True,
+                        x=0.39,
+                        xanchor="left",
+                        y=SETTINGS["button_layer_1_height"],
+                        yanchor="top",
+                    ),
+                ],
+                # Annotations for the layout
+                annotations=[
+                    dict(
+                        text="Colorscale",
+                        x=-0.03,
+                        xref="paper",
+                        y=SETTINGS["button_layer_1_height"] - 0.05,
+                        yref="paper",
+                        align="left",
+                        showarrow=False,
+                    ),
+                    dict(
+                        text="Reverse<br>Colorscale",
+                        x=0.26,
+                        xref="paper",
+                        y=SETTINGS["button_layer_1_height"] - 0.025,
+                        yref="paper",
+                        showarrow=False,
+                    ),
+                ],
+            )
+            fig.update_traces(colorscale=color_scale)
 
     def download_image(self, _=None):
         """
