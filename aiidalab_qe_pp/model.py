@@ -166,7 +166,6 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
 
         self.enable_all_calcs()
         if self.current_calc_lsda:
-            # self.calc_spin_dens = False
             self.disable_calc_spin_dens = False
             self.charge_dens_options = [
                 ("Total charge", 0),
@@ -175,19 +174,21 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
             ]
 
         else:
-            # self.calc_spin_dens = False
             self.disable_calc_spin_dens = True
             self.charge_dens_options = [("Total charge", 0)]
 
         if self.current_calc_soc:
-            # self.calc_stm = False
             self.disable_calc_stm = True
         else:
-            # self.calc_stm = False
             if self.input_structure.pbc != (True, True, True):
                 self.disable_calc_stm = False
             else:
                 self.disable_calc_stm = True
+
+        if self.pwcalc_type == "nscf":
+            self.disable_calc_ldos_grid = True
+        else:
+            self.disable_calc_ldos_grid = False
 
     def _get_default(self, trait):
         return self._defaults.get(trait, self.traits()[trait].default_value)
