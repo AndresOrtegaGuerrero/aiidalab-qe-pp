@@ -1,28 +1,32 @@
 from aiidalab_qe.common.mvc import Model
 import traitlets as tl
-import base64
-from ase.atoms import Atoms
-from IPython.display import Javascript
-from IPython.display import display
-import tempfile
-from pymatgen.io.common import VolumetricData
-import os
 from aiida.orm import StructureData
 from aiida.orm.nodes.process.workflow.workchain import WorkChainNode
 import numpy as np
+from ase.atoms import Atoms
+from pymatgen.io.common import VolumetricData
+import base64
+from IPython.display import display, Javascript
+import tempfile
+import os
 import threading
 
 from aiidalab_qe_pp.utils import download_remote_file
 
 
-class CubeVisualModel(Model):
+class Ldos3DVisualModel(Model):
     node = tl.Instance(WorkChainNode, allow_none=True)
     input_structure = tl.Instance(Atoms, allow_none=True)
     aiida_structure = tl.Instance(StructureData, allow_none=True)
     cube_data = tl.Instance(np.ndarray, allow_none=True)
-    plot_num = tl.Unicode("spin_dens")
     reduce_cube_files = tl.Bool(False)
     error_message = tl.Unicode("")
+
+    # calc_node_options = tl.List(trait=tl.List(tl.Union([tl.Unicode(), tl.Unicode()])), default_value=[])
+    ldos_files_list_options = tl.List(
+        trait=tl.List(tl.Union([tl.Unicode(), tl.Unicode()])), default_value=[]
+    )  # tl.List()
+    ldos_file = tl.Unicode()
 
     def fetch_data(self):
         self.input_structure = self.node.inputs.structure.get_ase()
@@ -30,9 +34,35 @@ class CubeVisualModel(Model):
         self.reduce_cube_files = self.node.inputs.parameters.get(
             "reduce_cube_files", False
         )
+        self.ldos_files_list_options = self.get_ldos_files_list_options()
+        self.ldos_file = self.ldos_files_list_options[0][1]
+        self.cube_data = self.node.outputs.ldos_grid.output_data_multiple[
+            self.ldos_file
+        ].get_array("data")
 
-    def download_cube(self, _=None, filename="plot"):
-        # Create a temporary file, write to it, and initiate download
+    def get_ldos_files_list_options(self):
+        import re
+
+        pattern = r"^\s*Energy\s*=.*"
+        aiida_out = self.node.outputs.ldos_grid.retrieved.get_object_content(
+            "aiida.out"
+        )
+        description_list = [
+            match.strip() for match in re.findall(pattern, aiida_out, re.MULTILINE)
+        ]
+        keys = list(self.node.outputs.ldos_grid.output_data_multiple.keys())
+        return list(zip(description_list, keys))
+
+    def update_plot(self):
+        self.cube_data = self.node.outputs.ldos_grid.output_data_multiple[
+            self.ldos_file
+        ].get_array("data")
+        isovalue = 2 * np.std(self.cube_data) + np.mean(self.cube_data)
+        return self.cube_data, isovalue
+
+    def download_cube(self, _=None):
+        """Download the cube file with the current kpoint and band in the filename."""
+        filename = f"ldos_{self.ldos_file}"
         with tempfile.NamedTemporaryFile(delete=False, suffix=".cube") as tmp:
             # Write the cube data to a temporary file using pymatgen's VolumetricData
             if self.aiida_structure.pbc != [True, True, True]:
@@ -54,10 +84,6 @@ class CubeVisualModel(Model):
         # Encode the file content to base64
         base64_payload = base64.b64encode(raw_bytes).decode()
 
-        # if filename is not provided, use plot_num
-        if filename == "plot":
-            filename = f"plot_{self.plot_num}"
-
         # JavaScript to trigger download
         filename = f"{filename}.cube"
         js_download = Javascript(
@@ -76,7 +102,7 @@ class CubeVisualModel(Model):
         os.unlink(tmp.name)
 
     def download_source_files(self, _=None):
-        remote_folder = self.node.outputs[f"{self.plot_num}"].remote_folder
+        remote_folder = self.node.outputs.ldos_grid.remote_folder
         if remote_folder.is_empty:
             message = "Unfortunately the remote folder is empty."
             self.error_message = (
@@ -86,7 +112,9 @@ class CubeVisualModel(Model):
             return
 
         download_remote_file(
-            remote_folder, f"plot_{self.plot_num}.cube", "aiida.fileout"
+            remote_folder,
+            f"plot_ldos_{self.ldos_file}.cube",
+            f"aiida.filplot{self.ldos_file}aiida.fileout",
         )
 
     def clear_error_message(self):

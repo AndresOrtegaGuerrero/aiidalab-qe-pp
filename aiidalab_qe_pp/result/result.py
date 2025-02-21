@@ -12,6 +12,9 @@ from aiidalab_qe_pp.result.widgets.stmvisualwidget import STMVisualWidget
 from aiidalab_qe_pp.result.widgets.wfnvisualwidget import WfnVisualWidget
 from aiidalab_qe_pp.result.widgets.wfnvisualmodel import WfnVisualModel
 
+from aiidalab_qe_pp.result.widgets.ldos3dvisualwidget import Ldos3DVisualWidget
+from aiidalab_qe_pp.result.widgets.ldos3dvisualmodel import Ldos3DVisualModel
+
 
 class PpResultsPanel(ResultsPanel[PpResultsModel]):
     title = "Post-processing"
@@ -90,11 +93,29 @@ class PpResultsPanel(ResultsPanel[PpResultsModel]):
             )
             tab_data.append(("ILDOS", cube_visual_widget))
 
+        needs_ildos_stm = self._model.needs_ildos_stm_tab()
+        if needs_ildos_stm:
+            ildos_stm_visual_model = STMVisualModel()
+            ildos_stm_visual_widget = STMVisualWidget(
+                ildos_stm_visual_model, pp_node["ildos_stm"]
+            )
+            tab_data.append(("ILDOS STM", ildos_stm_visual_widget))
+
         needs_stm = self._model.needs_stm_tab()
         if needs_stm:
             stm_visual_model = STMVisualModel()
             stm_visual_widget = STMVisualWidget(stm_visual_model, pp_node["stm"])
             tab_data.append(("STM", stm_visual_widget))
+
+        needs_ldos = self._model.needs_ldos_tab()
+        if needs_ldos:
+            node = self._model.fetch_child_process_node()
+            cube_visual_model = Ldos3DVisualModel()
+            cube_visual_widget = Ldos3DVisualWidget(
+                cube_visual_model,
+                node,
+            )
+            tab_data.append(("LDOS", cube_visual_widget))
 
         # Assign children and titles dynamically
         self.tabs.children = [content for _, content in tab_data]

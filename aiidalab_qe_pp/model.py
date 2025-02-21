@@ -45,6 +45,7 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
     calc_ildos = tl.Bool(False)
     calc_stm = tl.Bool(False)
     calc_potential = tl.Bool(False)
+    calc_ldos_grid = tl.Bool(False)
 
     disable_calc_charge_dens = tl.Bool(False)
     disable_calc_spin_dens = tl.Bool(False)
@@ -52,6 +53,7 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
     disable_calc_ildos = tl.Bool(False)
     disable_calc_stm = tl.Bool(False)
     disable_calc_potential = tl.Bool(False)
+    disable_calc_ldos_grid = tl.Bool(False)
 
     charge_dens = tl.Int(0)
     charge_dens_options = tl.List(
@@ -66,8 +68,16 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
     stm_options_displayed = tl.Unicode("none")
     ildos_options_displayed = tl.Unicode("none")
     ildos_spin_component_options_displayed = tl.Unicode("none")
+    ildos_stm_options_displayed = tl.Unicode("none")
     pwcalc_avail_displayed = tl.Unicode("block")
     wfn_options_displayed = tl.Unicode("none")
+    ldos_options_displayed = tl.Unicode("none")
+
+    ldos_emin = tl.Float(0)
+    ldos_emax = tl.Float(0)
+    ldos_delta_e = tl.Float(0.1)
+    degauss_ldos = tl.Float(0.01)
+    use_gauss_ldos = tl.Bool(False)
 
     ildos_emin = tl.Float(0)
     ildos_emax = tl.Float(0)
@@ -77,6 +87,9 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
         default_value=[("Up + Down", 0), ("Up", 1), ("Down", 2)],
     )
     ildos_spin_component = tl.Int(0)
+    calc_ildos_stm = tl.Bool(False)
+    ildos_stm_heights = tl.Unicode("2.0")
+    ildos_stm_currents = tl.Unicode("0.1")
 
     stm_sample_bias = tl.Unicode("0.0")
     stm_heights = tl.Unicode("2.0")
@@ -185,6 +198,12 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
         else:
             self.charge_dens_options_displayed = "none"
 
+    def on_change_calc_ldos_grid(self, _=None):
+        if self.calc_ldos_grid:
+            self.ldos_options_displayed = "block"
+        else:
+            self.ldos_options_displayed = "none"
+
     def on_change_calc_stm(self, _=None):
         if self.calc_stm:
             self.stm_options_displayed = "block"
@@ -207,6 +226,12 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
         else:
             self.ildos_options_displayed = "none"
 
+    def on_change_calc_ildos_stm(self, _=None):
+        if self.calc_ildos_stm:
+            self.ildos_stm_options_displayed = "block"
+        else:
+            self.ildos_stm_options_displayed = "none"
+
     def disable_all_calcs(self):
         self.disable_calc_charge_dens = True
         self.disable_calc_spin_dens = True
@@ -214,6 +239,7 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
         self.disable_calc_ildos = True
         self.disable_calc_stm = True
         self.disable_calc_potential = True
+        self.disable_calc_ldos_grid = True
 
     def enable_all_calcs(self):
         self.disable_calc_charge_dens = False
@@ -222,6 +248,7 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
         self.disable_calc_ildos = False
         self.disable_calc_stm = False
         self.disable_calc_potential = False
+        self.disable_calc_ldos_grid = False
 
     def update_kpoints_info(self, list_kpoints):
         """Update table with the kpoints. Number - (kx,ky,kz).  list_kpoints"""
@@ -356,10 +383,19 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
             "calc_wfn": self.calc_wfn,
             "calc_ildos": self.calc_ildos,
             "calc_stm": self.calc_stm,
+            "calc_ldos_grid": self.calc_ldos_grid,
+            "ldos_emin": self.ldos_emin,
+            "ldos_emax": self.ldos_emax,
+            "ldos_delta_e": self.ldos_delta_e,
+            "degauss_ldos": self.degauss_ldos,
+            "use_gauss_ldos": self.use_gauss_ldos,
             "charge_dens": self.charge_dens,
             "ildos_emin": self.ildos_emin,
             "ildos_emax": self.ildos_emax,
             "ildos_spin_component": self.ildos_spin_component,
+            "calc_ildos_stm": self.calc_ildos_stm,
+            "ildos_stm_heights": self.ildos_stm_heights,
+            "ildos_stm_currents": self.ildos_stm_currents,
             "stm_sample_bias": self.stm_sample_bias,
             "stm_heights": self.stm_heights,
             "stm_currents": self.stm_currents,
@@ -379,6 +415,12 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
         self.calc_wfn = parameters.get("calc_wfn", False)
         self.calc_ildos = parameters.get("calc_ildos", False)
         self.calc_stm = parameters.get("calc_stm", False)
+        self.calc_ldos_grid = parameters.get("calc_ldos_grid", False)
+        self.ldos_emin = parameters.get("ldos_emin", 0)
+        self.ldos_emax = parameters.get("ldos_emax", 0)
+        self.ldos_delta_e = parameters.get("ldos_delta_e", 0.1)
+        self.degauss_ldos = parameters.get("degauss_ldos", 0.01)
+        self.use_gauss_ldos = parameters.get("use_gauss_ldos", False)
         self.charge_dens = parameters.get("charge_dens", 0)
         self.ildos_emin = parameters.get("ildos_emin", 0)
         self.ildos_emax = parameters.get("ildos_emax", 0)
@@ -386,6 +428,9 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
         self.stm_sample_bias = parameters.get("stm_sample_bias", "0.0")
         self.stm_heights = parameters.get("stm_heights", "2.0")
         self.stm_currents = parameters.get("stm_currents", "0.00005")
+        self.calc_ildos_stm = parameters.get("calc_ildos_stm", False)
+        self.ildos_stm_heights = parameters.get("ildos_stm_heights", "2.0")
+        self.ildos_stm_currents = parameters.get("ildos_stm_currents", "0.1")
         self.sel_orbital = parameters.get("sel_orbital", [])
         self.pwcalc_avail_options = [
             [
@@ -403,3 +448,5 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
         self.on_change_calc_stm()
         self.on_change_calc_wfn()
         self.on_change_calc_ildos()
+        self.on_change_calc_ildos_stm()
+        self.on_change_calc_ldos_grid()

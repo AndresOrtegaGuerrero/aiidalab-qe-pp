@@ -36,3 +36,11 @@ class PpResultsModel(ResultsModel):
     def needs_stm_tab(self):
         node = self.get_pp_node()
         return "stm" in node
+
+    def needs_ldos_tab(self):
+        node = self.get_pp_node()
+        return "ldos_grid" in node
+
+    def needs_ildos_stm_tab(self):
+        node = self.get_pp_node()
+        return "ildos_stm" in node

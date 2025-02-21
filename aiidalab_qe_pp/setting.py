@@ -72,6 +72,13 @@ class PpConfigurationSettingPanel(
             </div>"""
         )
 
+        self.calc_ildos_stm_help = ipw.HTML(
+            """<div style="line-height: 140%; padding-top: 0px; padding-bottom: 5px">
+            We will use the ILDOS to compute STM images. Write the heights and currents to compute separated by a space. For example: 0.0 0.1 0.2
+            Heights should not exceed the c vector of the structure.
+            </div>"""
+        )
+
         # PwCalcList Widget
 
         # PwCalculation Type
@@ -155,6 +162,21 @@ class PpConfigurationSettingPanel(
         )
         self.calc_charge_dens.observe(
             self._on_change_calc_charge_dens,
+            "value",
+        )
+
+        # LDOS grid Calculation
+        self.calc_ldos_grid = ipw.Checkbox(
+            description="Local density of states at specific energies ",
+            indent=False,
+            style={"description_width": "initial"},
+        )
+        ipw.link((self._model, "calc_ldos_grid"), (self.calc_ldos_grid, "value"))
+        ipw.link(
+            (self._model, "disable_calc_ldos_grid"), (self.calc_ldos_grid, "disabled")
+        )
+        self.calc_ldos_grid.observe(
+            self._on_change_calc_ldos_grid,
             "value",
         )
 
@@ -298,6 +320,58 @@ class PpConfigurationSettingPanel(
             (self.wfn_options.layout, "display"),
         )
 
+        # Calc LDOS Options
+
+        self.ldos_emin = ipw.FloatText(
+            description="Emin (eV):",
+            style={"description_width": "initial"},
+            layout=ipw.Layout(width="fit-content"),
+        )
+        ipw.link((self._model, "ldos_emin"), (self.ldos_emin, "value"))
+
+        self.ldos_emax = ipw.FloatText(
+            description="Emax (eV):",
+            style={"description_width": "initial"},
+            layout=ipw.Layout(width="fit-content"),
+        )
+        ipw.link((self._model, "ldos_emax"), (self.ldos_emax, "value"))
+
+        self.ldos_delta_e = ipw.FloatText(
+            description="Spacing of energy grid (eV):",
+            style={"description_width": "initial"},
+            layout=ipw.Layout(width="fit-content"),
+        )
+        ipw.link((self._model, "ldos_delta_e"), (self.ldos_delta_e, "value"))
+
+        self.degauss_ldos = ipw.FloatText(
+            description="Degauss (eV):",
+            style={"description_width": "initial"},
+            layout=ipw.Layout(width="fit-content"),
+        )
+        ipw.link((self._model, "degauss_ldos"), (self.degauss_ldos, "value"))
+
+        self.use_gauss_ldos = ipw.Checkbox(
+            description="Use Gaussian broadening",
+            indent=True,
+            style={"description_width": "initial"},
+        )
+        ipw.link((self._model, "use_gauss_ldos"), (self.use_gauss_ldos, "value"))
+
+        self.ldos_parameters = ipw.HBox(
+            [
+                self.ldos_emin,
+                self.ldos_emax,
+                self.ldos_delta_e,
+                self.degauss_ldos,
+                self.use_gauss_ldos,
+            ]
+        )
+
+        ipw.link(
+            (self._model, "ldos_options_displayed"),
+            (self.ldos_parameters.layout, "display"),
+        )
+
         # Calc ILDOS Options
         self.ildos_emin = ipw.FloatText(
             description="Emin (eV):",
@@ -334,6 +408,50 @@ class PpConfigurationSettingPanel(
             </div>"""
         )
 
+        # STM for ILDOS
+
+        self.calc_ildos_stm = ipw.Checkbox(
+            description="Run STM from ILDOS",
+            indent=True,
+            style={"description_width": "initial"},
+        )
+        ipw.link((self._model, "calc_ildos_stm"), (self.calc_ildos_stm, "value"))
+        self.calc_ildos_stm.observe(
+            self._on_change_calc_ildos_stm,
+            "value",
+        )
+        self.ildos_stm_heights = ipw.Text(
+            description="Heights list (Å): ",
+            disabled=False,
+            style={"description_width": "initial"},
+        )
+        ipw.link((self._model, "ildos_stm_heights"), (self.ildos_stm_heights, "value"))
+        self.ildos_stm_currents = ipw.Text(
+            description="Currents list (a.u): ",
+            disabled=False,
+            style={"description_width": "initial"},
+            placeholder="arbitrary units",
+        )
+        ipw.link(
+            (self._model, "ildos_stm_currents"), (self.ildos_stm_currents, "value")
+        )
+
+        self.ildos_stm_parameters = ipw.VBox(
+            [
+                self.calc_ildos_stm_help,
+                ipw.HBox(
+                    [
+                        self.ildos_stm_heights,
+                        self.ildos_stm_currents,
+                    ]
+                ),
+            ]
+        )
+        ipw.link(
+            (self._model, "ildos_stm_options_displayed"),
+            (self.ildos_stm_parameters.layout, "display"),
+        )
+
         self.ildos_parameters = ipw.VBox(
             [
                 self.ildos_parameters_help,
@@ -344,6 +462,8 @@ class PpConfigurationSettingPanel(
                         self.ildos_spin_component,
                     ]
                 ),
+                self.calc_ildos_stm,
+                self.ildos_stm_parameters,
             ]
         )
         ipw.link(
@@ -403,6 +523,8 @@ class PpConfigurationSettingPanel(
             self.charge_dens_options,
             self.calc_spin_dens,
             self.calc_potential,
+            self.calc_ldos_grid,
+            self.ldos_parameters,
             self.calc_wfn,
             self.wfn_options,
             self.calc_ildos,
@@ -441,3 +563,9 @@ class PpConfigurationSettingPanel(
 
     def _on_change_calc_wfn(self, _):
         self._model.on_change_calc_wfn()
+
+    def _on_change_calc_ldos_grid(self, _):
+        self._model.on_change_calc_ldos_grid()
+
+    def _on_change_calc_ildos_stm(self, _):
+        self._model.on_change_calc_ildos_stm()

@@ -63,7 +63,8 @@ class STMVisualModel(Model):
         self._on_change_calc_node()
 
     def _on_change_calc_node(self):
-        self.stm_bias = self.dict_calcs[self.calc_node]["stm_bias"]
+        if "stm_data" in self.dict_calcs[self.calc_node]:
+            self.stm_bias = self.dict_calcs[self.calc_node]["stm_bias"]
         self.mode = self.dict_calcs[self.calc_node]["mode"]
         self.value = self.dict_calcs[self.calc_node]["value"]
         self.x_cart = self.node[self.list_calcs[self.calc_node]]["stm_data"].get_array(
@@ -96,35 +97,54 @@ class STMVisualModel(Model):
     def _get_calc_options(self):
         return [
             (
-                f"STM Bias: {entry['stm_bias']} eV, Mode: {entry['mode']}, Value: {entry['value']} {'Å' if entry['mode'] == 'height' else '(au)'}",
+                (f"STM Bias: {entry['stm_bias']} eV, " if "stm_bias" in entry else "")
+                + f"Mode: {entry['mode']}, Value: {entry['value']} {'Å' if entry['mode'] == 'height' else '(au)'}",
                 index,
             )
             for index, entry in enumerate(self.dict_calcs)
         ]
 
     def parse_strings_to_dicts(self, strings):
+        def parse_float(parts):
+            if len(parts) == 1:
+                return float(parts[0])
+            elif len(parts) == 2:
+                return float(parts[0] + "." + parts[1])
+            return None
+
         result = []
+
         for s in strings:
-            parts = s.split("_")
+            # Determine mode and extract value
+            mode = next((m for m in ["height", "current"] if m in s), None)
+            if not mode:
+                continue
 
-            # Extract and parse stm_bias value
-            if parts[2] == "neg":
-                bias_sign = -1
-                bias_index = 3
-            else:
-                bias_sign = 1
-                bias_index = 2
+            start_index = s.find(mode)
+            end_index = start_index + len(mode)
+            mode_value = s[end_index + 1 :].split("_")
+            value_float = parse_float(mode_value)
+            if value_float is None:
+                continue
 
-            stm_bias_str = parts[bias_index] + "." + parts[bias_index + 1]
-            stm_bias = bias_sign * float(stm_bias_str)
+            # Determine bias if present
+            bias_value_float = None
+            if "stm_bias" in s:
+                bias_value = s[
+                    s.find("stm_bias") + len("stm_bias") + 1 : start_index - 1
+                ]
+                bias_sign = -1 if "neg_" in bias_value else 1
+                bias_to_split = bias_value.replace("neg_", "").split("_")
+                bias_value_float = parse_float(bias_to_split)
+                if bias_value_float is not None:
+                    bias_value_float *= bias_sign
 
-            # Extract mode and value
-            mode = parts[bias_index + 2]
-            value_str = parts[bias_index + 3] + "." + parts[bias_index + 4]
-            value = float(value_str)
+            # Construct result dictionary
+            entry = {"mode": mode, "value": value_float}
+            if bias_value_float is not None:
+                entry["stm_bias"] = bias_value_float
 
-            # Create the dictionary
-            result.append({"stm_bias": stm_bias, "mode": mode, "value": value})
+            result.append(entry)
 
         return result
 
@@ -313,13 +333,15 @@ class STMVisualModel(Model):
     def download_data(self, _=None):
         filename = "stm_calculation.json"
         my_dict = {
-            "STM Bias (eV)": self.stm_bias,
             "Mode": self.mode,
             "Value": self.value,
             "fstm": self.f_stm.tolist(),
             "x_cart": self.x_cart.tolist(),
             "y_cart": self.y_cart.tolist(),
         }
+
+        if "stm_bias" in self.dict_calcs[self.calc_node]:
+            my_dict["STM Bias (eV)"] = self.stm_bias
 
         json_str = json.dumps(my_dict)
         b64_str = base64.b64encode(json_str.encode()).decode()

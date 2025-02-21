@@ -12,6 +12,7 @@ from IPython.display import display
 import tempfile
 import os
 import threading
+from aiidalab_qe_pp.utils import download_remote_file
 
 
 class WfnVisualModel(Model):
@@ -200,8 +201,22 @@ class WfnVisualModel(Model):
         # Clean up by removing the temporary file
         os.unlink(tmp.name)
 
+    def get_key_remote_folder(self, outputs, kpoint, band):
+        result = ""
+        for key in outputs.keys():
+            list_elements = key.split("_")
+            rel_kpoint = int(list_elements[1])
+            if len(list_elements) == 4:
+                rel_band = [int(list_elements[3])]
+            elif len(list_elements) == 5:
+                rel_band = list(range(int(list_elements[3]), int(list_elements[4]) + 1))
+
+            if rel_kpoint == kpoint and band in rel_band:
+                result = key
+
+        return result
+
     def download_source_files(self, _=None):
-        """Download the original cube files from the computer source."""
         kpoint = self.kpoint
         band = self.band
 
@@ -225,16 +240,16 @@ class WfnVisualModel(Model):
             self.error_message = (
                 f'<div style="color: red; font-weight: bold;">{message}</div>'
             )
-            threading.Timer(3.0, self.clear_error_message).start()
+            threading.Timer(10.0, self.clear_error_message).start()
             return
 
         filtered_files = [
             file for file in remote_folder.listdir() if file.endswith("aiida.fileout")
         ]
 
-        remote_file = None
+        file_download = None
         if "aiida.fileout" in filtered_files:
-            remote_file = "aiida.fileout"
+            file_download = "aiida.fileout"
         else:
             # To take the numbers between B and aiida.fileout
             pattern = re.compile(r"B(\d+)aiida\.fileout$")
@@ -243,61 +258,16 @@ class WfnVisualModel(Model):
                 if match:
                     band_number = int(match.group(1))
                     if band_number == band:
-                        remote_file = file
+                        file_download = file
                         break
-        if remote_file is None:
+        if file_download is None:
             self.error_message = "Unfortunately there is a problem with the file."
             threading.Timer(3.0, self.clear_error_message).start()
             return
 
-        with tempfile.NamedTemporaryFile(delete=False) as tmp:
-            temp_file_path = tmp.name
-
-        try:
-            remote_folder.getfile(remote_file, temp_file_path)
-
-            # Read the content of the temporary file
-            with open(temp_file_path, "rb") as file:
-                raw_bytes = file.read()
-
-            # Encode the file content to base64
-            base64_payload = base64.b64encode(raw_bytes).decode()
-
-            filename = f"plot_wfn_kp_{kpoint}_kb_{band}"
-
-            # JavaScript to trigger download
-            filename = f"{filename}.cube"
-            js_download = Javascript(
-                f"""
-                var link = document.createElement('a');
-                link.href = "data:application/octet-stream;base64,{base64_payload}";
-                link.download = "{filename}";
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                """
-            )
-            display(js_download)
-
-        finally:
-            # Ensure the temporary file is deleted after the operation
-            if os.path.exists(temp_file_path):
-                os.remove(temp_file_path)
+        download_remote_file(
+            remote_folder, f"plot_wfn_kp_{kpoint}_kb_{band}.cube", file_download
+        )
 
     def clear_error_message(self):
         self.error_message = ""
-
-    def get_key_remote_folder(self, outputs, kpoint, band):
-        result = ""
-        for key in outputs.keys():
-            list_elements = key.split("_")
-            rel_kpoint = int(list_elements[1])
-            if len(list_elements) == 4:
-                rel_band = [int(list_elements[3])]
-            elif len(list_elements) == 5:
-                rel_band = list(range(int(list_elements[3]), int(list_elements[4]) + 1))
-
-            if rel_kpoint == kpoint and band in rel_band:
-                result = key
-
-        return result
