@@ -23,7 +23,7 @@ setup(
     install_requires=[
         "weas-widget==0.1.25",
         "aiida-pythonjob==0.1.8",
-        "scikit-image",
+        "kaleido" "scikit-image",
     ],
     extras_require={
         "dev": [

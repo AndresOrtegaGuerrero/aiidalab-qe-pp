@@ -450,4 +450,3 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
         self.on_change_calc_ildos()
         self.on_change_calc_ildos_stm()
         self.on_change_calc_ldos_grid()
-        print(self.sel_orbital)
