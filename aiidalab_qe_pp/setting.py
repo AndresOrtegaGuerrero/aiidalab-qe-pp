@@ -74,7 +74,7 @@ class PpConfigurationSettingPanel(
 
         self.calc_ildos_stm_help = ipw.HTML(
             """<div style="line-height: 140%; padding-top: 0px; padding-bottom: 5px">
-            Write the list of parameters (bias , heights and currents) to compute separated by a space. For example: 0.0 0.1 0.2
+            We will use the ILDOS to compute STM images. Write the heights and currents to compute separated by a space. For example: 0.0 0.1 0.2
             Heights should not exceed the c vector of the structure.
             </div>"""
         )
@@ -493,7 +493,7 @@ class PpConfigurationSettingPanel(
         ipw.link((self._model, "stm_currents"), (self.stm_currents, "value"))
         self.stm_parameters = ipw.VBox(
             [
-                self.calc_ildos_stm_help,
+                self.calc_stm_help,
                 ipw.HBox(
                     [
                         self.stm_sample_bias,

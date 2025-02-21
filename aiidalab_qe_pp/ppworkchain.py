@@ -584,7 +584,6 @@ class PPWorkChain(WorkChain):
 
     def run_ildos_stm(self):
         ildos_stm = self.inputs.parameters["ildos_stm"]
-        ildos_stm["bias"] = ""
         stm_parameters = parse_stm_parameters(ildos_stm)
 
         remote_folder = self.ctx.calc_ildos.outputs.remote_folder
@@ -747,7 +746,7 @@ class PPWorkChain(WorkChain):
         """Attach the results of the PPWorkChain to the outputs."""
         failed = False
         for prop in self.inputs.properties:
-            if prop not in ["calc_wfn", "calc_stm", "calc_ldos_grid"]:
+            if prop not in ["calc_wfn", "calc_stm", "calc_ldos_grid", "calc_ildos_stm"]:
                 if self.ctx[f"{prop}"].is_finished_ok:
                     if self.inputs.parameters.get("reduce_cube_files"):
                         volumetric_data = self.ctx[

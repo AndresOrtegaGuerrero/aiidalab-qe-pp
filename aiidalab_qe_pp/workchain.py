@@ -131,6 +131,7 @@ def get_builder(codes, structure, parameters):
         "ildos_stm": {
             "heights": parameters["pp"]["ildos_stm_heights"],
             "currents": parameters["pp"]["ildos_stm_currents"],
+            "sample_bias": "",
         },
         "fermi": fermi,
     }
