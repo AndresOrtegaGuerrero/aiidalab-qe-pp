@@ -36,9 +36,12 @@ class Ldos3DVisualModel(Model):
         )
         self.ldos_files_list_options = self.get_ldos_files_list_options()
         self.ldos_file = self.ldos_files_list_options[0][1]
-        self.cube_data = self.node.outputs.ldos_grid.output_data_multiple[
-            self.ldos_file
-        ].get_array("data")
+        if "output_data_multiple" in self.node.outputs.ldos_grid:
+            self.cube_data = self.node.outputs.ldos_grid.output_data_multiple[
+                self.ldos_file
+            ].get_array("data")
+        else:
+            self.cube_data = self.node.outputs.ldos_grid.output_data.get_array("data")
 
     def get_ldos_files_list_options(self):
         import re
@@ -50,13 +53,25 @@ class Ldos3DVisualModel(Model):
         description_list = [
             match.strip() for match in re.findall(pattern, aiida_out, re.MULTILINE)
         ]
-        keys = list(self.node.outputs.ldos_grid.output_data_multiple.keys())
-        return list(zip(description_list, keys))
+        fermi = self.node.inputs.parameters.get("fermi", 0.0)
+        updated_description_list = [
+            f"Energy =  {float(line.split('=')[1].split('eV')[0].strip()) - fermi:.5f} eV, broadening ={line.split('broadening =')[1]}"
+            for line in description_list
+        ]
+
+        if "output_data_multiple" in self.node.outputs.ldos_grid:
+            keys = list(self.node.outputs.ldos_grid.output_data_multiple.keys())
+        else:
+            keys = list("output_data")
+        return list(zip(updated_description_list, keys))
 
     def update_plot(self):
-        self.cube_data = self.node.outputs.ldos_grid.output_data_multiple[
-            self.ldos_file
-        ].get_array("data")
+        if "output_data_multiple" in self.node.outputs.ldos_grid:
+            self.cube_data = self.node.outputs.ldos_grid.output_data_multiple[
+                self.ldos_file
+            ].get_array("data")
+        else:
+            self.cube_data = self.node.outputs.ldos_grid.output_data.get_array("data")
         isovalue = 2 * np.std(self.cube_data) + np.mean(self.cube_data)
         return self.cube_data, isovalue
 
@@ -111,10 +126,21 @@ class Ldos3DVisualModel(Model):
             threading.Timer(10.0, self.clear_error_message).start()
             return
 
+        filename = (
+            f"plot_ldos_{self.ldos_file}.cube"
+            if "output_data_multiple" in self.node.outputs.ldos_grid
+            else "plot_ldos.cube"
+        )
+        filename_retrieved = (
+            f"aiida.filplot{self.ldos_file}aiida.fileout"
+            if "output_data_multiple" in self.node.outputs.ldos_grid
+            else "aiida.fileout"
+        )
+
         download_remote_file(
             remote_folder,
-            f"plot_ldos_{self.ldos_file}.cube",
-            f"aiida.filplot{self.ldos_file}aiida.fileout",
+            filename,
+            filename_retrieved,
         )
 
     def clear_error_message(self):
