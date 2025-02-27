@@ -89,15 +89,19 @@ def get_builder(codes, structure, parameters):
     # RemoteFolder
     remote_folder = aiida_node.outputs.remote_folder
 
+    output_parameters = aiida_node.outputs.output_parameters.get_dict()
+
     # Orbitals
     lsda = parameters["pp"]["current_calc_lsda"]
-    number_of_k_points = aiida_node.outputs.output_parameters.get_dict()[
-        "number_of_k_points"
-    ]
+    number_of_k_points = output_parameters["number_of_k_points"]
+
     lsign = parameters["pp"]["lsign"]
 
     # Fermi level
-    fermi = aiida_node.outputs.output_parameters.get_dict()["fermi_energy"]
+    if "fermi_energy" in output_parameters:
+        fermi = output_parameters["fermi_energy"]
+    else:
+        fermi = output_parameters["fermi_energy_up"]
 
     # Parameters
     pp_parameters = {
