@@ -102,7 +102,7 @@ def download_remote_file(remote_folder, temp_file_name, file_download):
                         .then(response => console.log("File deletion request sent."));
                     }}
                 }});
-            }}, 10000);  // Delete file after 10 seconds
+            }}, 30000);
             """
         )
         display(js_download)
