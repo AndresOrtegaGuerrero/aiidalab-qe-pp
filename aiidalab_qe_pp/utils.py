@@ -58,6 +58,20 @@ def resized_cube_files(folder: str = "parent_folder"):
     return results
 
 
+def get_jupyter_base_url():
+    from notebook import notebookapp
+
+    """Detects whether the Jupyter server is running in a multi-user setup and returns the appropriate base URL."""
+    try:
+        servers = list(notebookapp.list_running_servers())
+        if servers:
+            base_url = servers[0].get("base_url", "/")
+            return base_url.rstrip("/")
+    except Exception as e:
+        print(f"Error detecting Jupyter server base URL: {e}")
+    return ""
+
+
 def download_remote_file(remote_folder, temp_file_name, file_download):
     import os
     import threading
@@ -77,7 +91,8 @@ def download_remote_file(remote_folder, temp_file_name, file_download):
             print("ERROR: Downloaded file is empty.")
             return
 
-        jupyter_path = f"/files/{temp_file_name}"
+        base_url = get_jupyter_base_url()
+        jupyter_path = f"{base_url}/files/{temp_file_name}"
 
         js_download = Javascript(
             f"""
@@ -102,13 +117,13 @@ def download_remote_file(remote_folder, temp_file_name, file_download):
                         .then(response => console.log("File deletion request sent."));
                     }}
                 }});
-            }}, 30000);
+            }}, 90000);
             """
         )
         display(js_download)
 
         def delete_file():
-            time.sleep(60)
+            time.sleep(120)
             if os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
 
