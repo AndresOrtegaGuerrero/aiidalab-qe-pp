@@ -102,13 +102,13 @@ def download_remote_file(remote_folder, temp_file_name, file_download):
                         .then(response => console.log("File deletion request sent."));
                     }}
                 }});
-            }}, 30000);
+            }}, 120000);
             """
         )
         display(js_download)
 
         def delete_file():
-            time.sleep(60)
+            time.sleep(160)
             if os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
 
