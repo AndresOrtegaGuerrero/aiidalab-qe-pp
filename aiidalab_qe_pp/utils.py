@@ -58,6 +58,20 @@ def resized_cube_files(folder: str = "parent_folder"):
     return results
 
 
+def get_jupyter_base_url():
+    from notebook import notebookapp
+
+    """Detects whether the Jupyter server is running in a multi-user setup and returns the appropriate base URL."""
+    try:
+        servers = list(notebookapp.list_running_servers())
+        if servers:
+            base_url = servers[0].get("base_url", "/")
+            return base_url.rstrip("/")
+    except Exception as e:
+        print(f"Error detecting Jupyter server base URL: {e}")
+    return ""
+
+
 def download_remote_file(remote_folder, temp_file_name, file_download):
     import os
     import threading
@@ -77,50 +91,39 @@ def download_remote_file(remote_folder, temp_file_name, file_download):
             print("ERROR: Downloaded file is empty.")
             return
 
-        jupyter_path = f"/files/{temp_file_name}"
+        base_url = get_jupyter_base_url()
+        jupyter_path = f"{base_url}/files/{temp_file_name}"
 
-        js_code = f"""
-        (function(){{
+        js_download = Javascript(
+            f"""
             var link = document.createElement('a');
             link.href = "{jupyter_path}";
             link.download = "{temp_file_name}";
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-        }})();
-        """
-        display(Javascript(js_code))
 
-        # js_download = Javascript(
-        #     f"""
-        #     var link = document.createElement('a');
-        #     link.href = "{jupyter_path}";
-        #     link.download = "{temp_file_name}";
-        #     document.body.appendChild(link);
-        #     link.click();
-        #     document.body.removeChild(link);
-
-        #     setTimeout(function() {{
-        #         fetch("{jupyter_path}", {{ method: 'HEAD' }})
-        #         .then(response => {{
-        #             if (response.status === 404) {{
-        #                 console.log("File already deleted.");
-        #             }} else {{
-        #                 fetch('/delete_file', {{
-        #                     method: 'POST',
-        #                     headers: {{ 'Content-Type': 'application/json' }},
-        #                     body: JSON.stringify({{'file_path': '{temp_file_path}'}})
-        #                 }})
-        #                 .then(response => console.log("File deletion request sent."));
-        #             }}
-        #         }});
-        #     }}, 120000);
-        #     """
-        # )
-        # display(js_download)
+            setTimeout(function() {{
+                fetch("{jupyter_path}", {{ method: 'HEAD' }})
+                .then(response => {{
+                    if (response.status === 404) {{
+                        console.log("File already deleted.");
+                    }} else {{
+                        fetch('/delete_file', {{
+                            method: 'POST',
+                            headers: {{ 'Content-Type': 'application/json' }},
+                            body: JSON.stringify({{'file_path': '{temp_file_path}'}})
+                        }})
+                        .then(response => console.log("File deletion request sent."));
+                    }}
+                }});
+            }}, 60000);
+            """
+        )
+        display(js_download)
 
         def delete_file():
-            time.sleep(160)
+            time.sleep(90)
             if os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
 
