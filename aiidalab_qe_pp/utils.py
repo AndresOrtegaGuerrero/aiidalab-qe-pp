@@ -79,33 +79,46 @@ def download_remote_file(remote_folder, temp_file_name, file_download):
 
         jupyter_path = f"/files/{temp_file_name}"
 
-        js_download = Javascript(
-            f"""
+        js_code = f"""
+        (function(){{
             var link = document.createElement('a');
             link.href = "{jupyter_path}";
             link.download = "{temp_file_name}";
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+        }})();
+        """
+        display(Javascript(js_code))
 
-            setTimeout(function() {{
-                fetch("{jupyter_path}", {{ method: 'HEAD' }})
-                .then(response => {{
-                    if (response.status === 404) {{
-                        console.log("File already deleted.");
-                    }} else {{
-                        fetch('/delete_file', {{
-                            method: 'POST',
-                            headers: {{ 'Content-Type': 'application/json' }},
-                            body: JSON.stringify({{'file_path': '{temp_file_path}'}})
-                        }})
-                        .then(response => console.log("File deletion request sent."));
-                    }}
-                }});
-            }}, 120000);
-            """
-        )
-        display(js_download)
+
+        # js_download = Javascript(
+        #     f"""
+        #     var link = document.createElement('a');
+        #     link.href = "{jupyter_path}";
+        #     link.download = "{temp_file_name}";
+        #     document.body.appendChild(link);
+        #     link.click();
+        #     document.body.removeChild(link);
+
+        #     setTimeout(function() {{
+        #         fetch("{jupyter_path}", {{ method: 'HEAD' }})
+        #         .then(response => {{
+        #             if (response.status === 404) {{
+        #                 console.log("File already deleted.");
+        #             }} else {{
+        #                 fetch('/delete_file', {{
+        #                     method: 'POST',
+        #                     headers: {{ 'Content-Type': 'application/json' }},
+        #                     body: JSON.stringify({{'file_path': '{temp_file_path}'}})
+        #                 }})
+        #                 .then(response => console.log("File deletion request sent."));
+        #             }}
+        #         }});
+        #     }}, 120000);
+        #     """
+        # )
+        # display(js_download)
 
         def delete_file():
             time.sleep(160)
