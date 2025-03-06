@@ -91,7 +91,6 @@ def download_remote_file(remote_folder, temp_file_name, file_download):
         """
         display(Javascript(js_code))
 
-
         # js_download = Javascript(
         #     f"""
         #     var link = document.createElement('a');
