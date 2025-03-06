@@ -14,7 +14,7 @@ pip install -e .
 
 This plugin enables the computation of reduced-size cube files generated from Python using the [AiiDA-PythonJob plugin](https://github.com/aiidateam/aiida-pythonjob).
 To ensure compatibility, set up an AiiDA code that utilizes the same Python version as your AiiDAlab environment.
-Ensure that your environment includes the `pymatgen` and `scikit-image` libraries.
+Ensure that your environment includes the `pymatgen` , `cloudpickle` and `scikit-image` libraries.
 Once configured, you can set up your AiiDA code with the following command:
 
 
