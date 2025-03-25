@@ -38,7 +38,7 @@ dev = [
 Homepage = "https://github.com/AndresOrtegaGuerrero/aiidalab-qe-pp"
 
 
-[project.entry_points."aiida.calculations"]
+[project.entry-points."aiida.calculations"]
 "critic2" = "aiidalab_qe_pp.aiida_critic2.calculations:Critic2Calculation"
 
 [project.entry-points."aiida.parsers"]
