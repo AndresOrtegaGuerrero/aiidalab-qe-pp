@@ -1,3 +1,51 @@
 [build-system]
-requires = ["setuptools>=68.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["flit_core >=3.4,<4"]
+build-backend = "flit_core.buildapi"
+
+
+[project]
+name = "aiidalab-qe-pp"
+version = "0.0.1b"
+description = "AiiDAlab quantum ESPRESSO app plugin for PP code"
+readme = "README.md"
+license = {file = "LICENSE"}
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Framework :: AiiDA",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+    "Programming Language :: Python :: 3",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "weas-widget==0.1.25",
+    "aiida-pythonjob==0.1.8",
+    "scikit-image",
+    "kaleido",
+]
+
+
+[[project.authors]]
+name = "Andres Ortega-Guerrero"
+
+[project.optional-dependencies]
+dev = [
+    "ruff"
+]
+
+[project.urls]
+Homepage = "https://github.com/AndresOrtegaGuerrero/aiidalab-qe-pp"
+
+
+[project.entry_points."aiida.calculations"]
+"critic2" = "aiidalab_qe_pp.aiida_critic2.calculations:Critic2Calculation"
+
+[project.entry-points."aiida.parsers"]
+"critic2" = "aiidalab_qe_pp.aiida_critic2.parsers:Critic2Parser"
+
+[project.entry-points."aiida.workflows"]
+"pp_app.pp" = "aiidalab_qe_pp.ppworkchain:PPWorkChain"
+
+[project.entry-points."aiidalab_qe.properties"]
+"pp" = "aiidalab_qe_pp:pp"
