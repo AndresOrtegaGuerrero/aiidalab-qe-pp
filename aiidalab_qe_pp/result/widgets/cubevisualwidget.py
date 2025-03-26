@@ -87,6 +87,6 @@ class CubeVisualWidget(ipw.VBox):
                 self.download_source_box,
             ]
         else:
-            self.children = [self.viewer, self.buttons]
+            self.children = [self.viewer, self.download_button]
 
         self.rendered = True
