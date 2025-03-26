@@ -11,7 +11,7 @@ import tempfile
 import os
 import threading
 
-from aiidalab_qe_pp.utils import download_remote_file
+from aiidalab_qe_pp.app.utils import download_remote_file
 
 
 class Ldos3DVisualModel(Model):

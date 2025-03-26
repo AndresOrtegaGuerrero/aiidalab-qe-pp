@@ -1,6 +1,6 @@
 import ipywidgets as ipw
 
-from aiidalab_qe_pp.result.widgets.wfnvisualmodel import WfnVisualModel
+from aiidalab_qe_pp.app.result.widgets.wfnvisualmodel import WfnVisualModel
 from weas_widget import WeasWidget
 
 

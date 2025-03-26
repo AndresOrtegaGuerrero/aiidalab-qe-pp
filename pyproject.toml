@@ -10,7 +10,7 @@ description = "AiiDAlab quantum ESPRESSO app plugin for PP code"
 readme = "README.md"
 license = {file = "LICENSE"}
 classifiers = [
-    "Development Status :: 1 - Planning",
+    "Development Status :: 3 - Alpha",
     "Framework :: AiiDA",
     "License :: OSI Approved :: MIT License",
     "Operating System :: POSIX :: Linux",
@@ -45,7 +45,10 @@ Homepage = "https://github.com/AndresOrtegaGuerrero/aiidalab-qe-pp"
 "critic2" = "aiidalab_qe_pp.aiida_critic2.parsers:Critic2Parser"
 
 [project.entry-points."aiida.workflows"]
-"pp_app.pp" = "aiidalab_qe_pp.ppworkchain:PPWorkChain"
+"pp_app.pp" = "aiidalab_qe_pp.workflows.ppworkchain:PPWorkChain"
 
 [project.entry-points."aiidalab_qe.properties"]
-"pp" = "aiidalab_qe_pp:pp"
+"pp" = "aiidalab_qe_pp.app:pp"
+
+[project.scripts]
+"aiidalab-qe-pp" = "aiidalab_qe_pp.__main__:cli"

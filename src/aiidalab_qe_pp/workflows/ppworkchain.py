@@ -5,7 +5,7 @@ from aiida.common import AttributeDict
 from aiida_pythonjob.launch import prepare_pythonjob_inputs
 from aiida_pythonjob import PythonJob
 import numpy as np
-from .utils import resized_cube_files
+from aiidalab_qe_pp.app.utils import resized_cube_files
 
 PpCalculation = CalculationFactory("quantumespresso.pp")
 Critic2Calculation = CalculationFactory("critic2")
@@ -908,49 +908,6 @@ class PPWorkChain(WorkChain):
                     self.report(
                         f"No workchains found for '{prop}' with labels starting with '{prefix}'"
                     )
-
-            # elif prop == "calc_stm":
-            #     stm_found = False
-            #     stm_outputs = {}
-            #     for label, workchain in self.ctx.items():
-            #         if label.startswith("stm_"):
-            #             stm_found = True
-            #             if workchain.is_finished_ok:
-            #                 stm_outputs[label] = {}
-            #                 process = getattr(self.ctx, label)
-            #                 for key in process.outputs._get_keys():
-            #                     stm_outputs[label][key] = getattr(process.outputs, key)
-            #             else:
-            #                 self.report(f"{label} calculation failed")
-            #                 failed = True
-            #     self.out("stm", stm_outputs)
-
-            #     if not stm_found:
-            #         self.report(
-            #             "No workchains found for 'calc_stm' with labels starting with 'stm_'"
-            #         )
-            # elif prop == "calc_ildos_stm":
-            #     ildos_stm_found = False
-            #     ildos_stm_outputs = {}
-            #     for label, workchain in self.ctx.items():
-            #         if label.startswith("ildos_stm_"):
-            #             ildos_stm_found = True
-            #             if workchain.is_finished_ok:
-            #                 ildos_stm_outputs[label] = {}
-            #                 process = getattr(self.ctx, label)
-            #                 for key in process.outputs._get_keys():
-            #                     ildos_stm_outputs[label][key] = getattr(
-            #                         process.outputs, key
-            #                     )
-            #             else:
-            #                 self.report(f"{label} calculation failed")
-            #                 failed = True
-            #     self.out("ildos_stm", ildos_stm_outputs)
-
-            #     if not ildos_stm_found:
-            #         self.report(
-            #             "No workchains found for 'calc_ildos_stm' with labels starting with 'ildos_stm_'"
-            #         )
 
         if failed:
             return self.exit_codes.ERROR_SUB_PROCESS_FAILED

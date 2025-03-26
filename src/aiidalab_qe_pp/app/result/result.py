@@ -1,19 +1,19 @@
 """PP Plugin results panel."""
 
 from aiidalab_qe.common.panel import ResultsPanel
-from aiidalab_qe_pp.result.model import PpResultsModel
+from aiidalab_qe_pp.app.result.model import PpResultsModel
 import ipywidgets as ipw
 
-from aiidalab_qe_pp.result.widgets.cubevisualmodel import CubeVisualModel
-from aiidalab_qe_pp.result.widgets.cubevisualwidget import CubeVisualWidget
-from aiidalab_qe_pp.result.widgets.stmvisualmodel import STMVisualModel
-from aiidalab_qe_pp.result.widgets.stmvisualwidget import STMVisualWidget
+from aiidalab_qe_pp.app.result.widgets.cubevisualmodel import CubeVisualModel
+from aiidalab_qe_pp.app.result.widgets.cubevisualwidget import CubeVisualWidget
+from aiidalab_qe_pp.app.result.widgets.stmvisualmodel import STMVisualModel
+from aiidalab_qe_pp.app.result.widgets.stmvisualwidget import STMVisualWidget
 
-from aiidalab_qe_pp.result.widgets.wfnvisualwidget import WfnVisualWidget
-from aiidalab_qe_pp.result.widgets.wfnvisualmodel import WfnVisualModel
+from aiidalab_qe_pp.app.result.widgets.wfnvisualwidget import WfnVisualWidget
+from aiidalab_qe_pp.app.result.widgets.wfnvisualmodel import WfnVisualModel
 
-from aiidalab_qe_pp.result.widgets.ldos3dvisualwidget import Ldos3DVisualWidget
-from aiidalab_qe_pp.result.widgets.ldos3dvisualmodel import Ldos3DVisualModel
+from aiidalab_qe_pp.app.result.widgets.ldos3dvisualwidget import Ldos3DVisualWidget
+from aiidalab_qe_pp.app.result.widgets.ldos3dvisualmodel import Ldos3DVisualModel
 
 
 class PpResultsPanel(ResultsPanel[PpResultsModel]):
