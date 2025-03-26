@@ -1,6 +1,6 @@
 import ipywidgets as ipw
 
-from aiidalab_qe_pp.result.widgets.stmvisualmodel import STMVisualModel
+from aiidalab_qe_pp.app.result.widgets.stmvisualmodel import STMVisualModel
 
 
 class STMVisualWidget(ipw.VBox):

@@ -1,18 +1,21 @@
 import ipywidgets as ipw
 from weas_widget import WeasWidget
-from aiidalab_qe_pp.result.widgets.ldos3dvisualmodel import Ldos3DVisualModel
+from aiidalab_qe_pp.app.result.widgets.cubevisualmodel import CubeVisualModel
+import numpy as np
 
 
-class Ldos3DVisualWidget(ipw.VBox):
+class CubeVisualWidget(ipw.VBox):
     """Widget to visualize the output data from PPWorkChain."""
 
-    def __init__(self, model: Ldos3DVisualModel, node, **kwargs):
+    def __init__(self, model: CubeVisualModel, node, cube_data, plot_num, **kwargs):
         super().__init__(
-            children=[ipw.HTML("Loading Ldos3D data...")],
+            children=[ipw.HTML("Loading Cube data...")],
             **kwargs,
         )
         self._model = model
         self._model.node = node
+        self._model.cube_data = cube_data
+        self._model.plot_num = plot_num
         self._model.fetch_data()
         self.rendered = False
 
@@ -33,27 +36,29 @@ class Ldos3DVisualWidget(ipw.VBox):
                 "measurement": True,
             },
         }
+        # WeasWidget Setting
+        self.viewer = WeasWidget(guiConfig=self.guiConfig)
+        self.viewer.from_ase(self._model.input_structure)
+        isovalue = 2 * np.std(self._model.cube_data) + np.mean(self._model.cube_data)
+        self.viewer.avr.iso.volumetric_data = {"values": self._model.cube_data}
+        self.viewer.avr.iso.settings = {
+            "positive": {"isovalue": isovalue},
+            "negative": {"isovalue": -isovalue, "color": "yellow"},
+        }
+        self.viewer.avr.color_type = "JMOL"
+        self.viewer.avr.model_style = 1
 
-        self.ldos_files_list = ipw.Dropdown(
-            description="Ldos files:",
-            style={"description_width": "initial"},
-            layout={"width": "500px"},
-        )
-        ipw.dlink(
-            (self._model, "ldos_files_list_options"),
-            (self.ldos_files_list, "options"),
-        )
-        ipw.link((self._model, "ldos_file"), (self.ldos_files_list, "value"))
-        self.ldos_files_list.observe(self._on_ldos_file_change, "value")
-
+        # Download Cubefile Button
         self.download_button = ipw.Button(
             description="Cube file",
             button_style="primary",
             icon="download",
         )
+
         self.download_button.on_click(self._model.download_cube)
 
         # Download original files from HPC source
+
         self.info_original_files = ipw.HTML(
             """
             <b>Download original files from computer source:</b>
@@ -67,37 +72,21 @@ class Ldos3DVisualWidget(ipw.VBox):
             icon="download",
         )
         self.download_source_button.on_click(self._model.download_source_files)
+
         self.error_message = ipw.HTML("")
         ipw.link((self._model, "error_message"), (self.error_message, "value"))
+
         self.download_source_box = ipw.VBox(
             [self.info_original_files, self.download_source_button, self.error_message]
         )
 
-        self.plot = WeasWidget(guiConfig=self.guiConfig)
-        self.plot.from_ase(self._model.input_structure)
-        self.plot.avr.color_type = "JMOL"
-        self.plot.avr.model_style = 1
-        self._update_plot()
-
         if self._model.reduce_cube_files:
             self.children = [
-                self.ldos_files_list,
-                self.plot,
+                self.viewer,
                 self.download_button,
                 self.download_source_box,
             ]
         else:
-            self.children = [self.ldos_files_list, self.plot, self.download_button]
+            self.children = [self.viewer, self.download_button]
+
         self.rendered = True
-
-    def _update_plot(self):
-        cube_data, isovalue = self._model.update_plot()
-        self.plot.avr.iso.volumetric_data = {"values": cube_data}
-        self.plot.avr.iso.settings = {
-            "positive": {"isovalue": isovalue},
-            "negative": {"isovalue": -isovalue, "color": "yellow"},
-        }
-        self.plot.avr.draw()
-
-    def _on_ldos_file_change(self, _):
-        self._update_plot()

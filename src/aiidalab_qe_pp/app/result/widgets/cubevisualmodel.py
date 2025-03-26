@@ -12,7 +12,7 @@ from aiida.orm.nodes.process.workflow.workchain import WorkChainNode
 import numpy as np
 import threading
 
-from aiidalab_qe_pp.utils import download_remote_file
+from aiidalab_qe_pp.app.utils import download_remote_file
 
 
 class CubeVisualModel(Model):

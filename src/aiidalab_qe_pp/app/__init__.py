@@ -1,14 +1,14 @@
 from aiidalab_qe.common.panel import PluginOutline
 
-from aiidalab_qe_pp.code import PpResourceSettingsModel, PpResourceSettingsPanel
+from aiidalab_qe_pp.app.code import PpResourceSettingsModel, PpResourceSettingsPanel
 
 
-from aiidalab_qe_pp.workchain import workchain_and_builder
-from aiidalab_qe_pp.model import PpConfigurationSettingsModel
-from aiidalab_qe_pp.setting import PpConfigurationSettingPanel
+from aiidalab_qe_pp.app.workchain import workchain_and_builder
+from aiidalab_qe_pp.app.model import PpConfigurationSettingsModel
+from aiidalab_qe_pp.app.setting import PpConfigurationSettingPanel
 
-from aiidalab_qe_pp.result.model import PpResultsModel
-from aiidalab_qe_pp.result.result import PpResultsPanel
+from aiidalab_qe_pp.app.result.model import PpResultsModel
+from aiidalab_qe_pp.app.result.result import PpResultsPanel
 
 
 class PpPluginOutline(PluginOutline):
