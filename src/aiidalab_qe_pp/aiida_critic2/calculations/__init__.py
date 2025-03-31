@@ -9,12 +9,12 @@ def create_file_content(input_file, parameters):
     if "cells" in parameters:
         content = f"""crystal {input_file}
 load {input_file}
-stm {parameters['mode']} {parameters['value']} cells {parameters['cells'][0]} {parameters['cells'][1]}
+stm {parameters["mode"]} {parameters["value"]} cells {parameters["cells"][0]} {parameters["cells"][1]}
 """
     else:
         content = f"""crystal {input_file}
 load {input_file}
-stm {parameters['mode']} {parameters['value']}
+stm {parameters["mode"]} {parameters["value"]}
 """
 
     return content
