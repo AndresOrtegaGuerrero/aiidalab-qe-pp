@@ -21,16 +21,17 @@ class Ldos3DVisualWidget(ipw.VBox):
             return
 
         self.guiConfig = {
-            "enabled": True,
             "components": {
                 "atomsControl": True,
                 "buttons": True,
                 "cameraControls": True,
+                "enabled": True,
             },
             "buttons": {
                 "fullscreen": True,
                 "download": True,
                 "measurement": True,
+                "enabled": True,
             },
         }
 
