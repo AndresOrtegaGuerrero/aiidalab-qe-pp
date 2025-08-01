@@ -102,7 +102,9 @@ def post_install():
         try:
             print("Running cmake and make to build critic2...")
             subprocess.run(["cmake", ".."], check=True)
-            subprocess.run(["make"], check=True)
+            subprocess.run(
+                ["make -j4"], check=True
+            )  # Adjust the number of jobs as needed
             print("Critic2 installation complete!")
         except subprocess.CalledProcessError as e:
             print(f"Error during the installation process: {e}")
