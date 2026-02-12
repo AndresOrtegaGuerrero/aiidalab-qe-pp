@@ -85,5 +85,12 @@ If you have any questions or suggestions, feel free to reach out:
 - **Email**: [andres.ortega-guerrero@empa.ch](andres.ortega-guerrero@empa.ch)
 
 ## Acknowledgements
+
+If you use the AiiDAlab QE app in your work, please cite:
+Wang, X., Bainglass, E., Bonacci, M., Ortega-Guerrero, A. et al.
+Making atomistic materials calculations accessible with the AiiDAlab Quantum ESPRESSO app
+npj Comput Mater 12, 72 (2026). [https://doi.org/10.1038/s41524-025-01936-4]https://doi.org/10.1038/s41524-025-01936-4
+
+
 We acknowledge support from:
 * the [NCCR MARVEL](http://nccr-marvel.ch/) funded by the Swiss National Science Foundation;
