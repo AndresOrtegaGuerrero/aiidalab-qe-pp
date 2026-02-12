@@ -19,7 +19,7 @@ classifiers = [
 ]
 requires-python = ">=3.9"
 dependencies = [
-    "weas-widget==0.1.25",
+    "weas-widget==0.2.6",
     "aiida-pythonjob==0.1.8",
     "scikit-image",
     "kaleido",
