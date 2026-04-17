@@ -3,35 +3,48 @@ def resized_cube_files(folder: str = "parent_folder"):
     import numpy as np
     from pymatgen.io.common import VolumetricData
     from skimage.transform import resize
-    from skimage.metrics import structural_similarity as ssim
     import re
 
     def optimal_scaling_factor(
-        data, min_factor=0.1, max_factor=1.0, step=0.1, threshold=0.99
+        data, min_factor=0.1, max_factor=1.0, tol=0.01, max_l2_error=0.035
     ):
         """
         Determine the optimal scaling factor for downsampling 3D data without significant loss of information.
         """
         original_shape = data.shape
-        best_factor = max_factor
+        original_size = np.prod(original_shape)
+        original_norm = np.linalg.norm(data)
 
-        for factor in np.arange(max_factor, min_factor, -step):
+        if (
+            original_norm < 1e-12
+        ):  # For cases where data is zero (Is possible) and we aviod division by zero
+            return max_factor
+
+        def is_valid_factor(factor):
             new_shape = tuple(max(1, int(dim * factor)) for dim in original_shape)
-            resized_data = resize(
+            new_size = np.prod(new_shape)
+
+            if new_size < min_factor * original_size:
+                return False
+
+            resized_date = resize(
                 data, new_shape, anti_aliasing=True
-            )  # Upsample back to original shape for comparison
-            upsampled_data = resize(resized_data, original_shape, anti_aliasing=True)
-            current_ssim = ssim(
-                data, upsampled_data, data_range=data.max() - data.min()
-            )  # Compute structural_similarity between the original and upsampled data
+            )  # Downsample the data
+            upsampled_data = resize(resized_date, original_shape, anti_aliasing=True)
+            l2_error = np.linalg.norm(data - upsampled_data) / original_norm
+            return l2_error <= max_l2_error
 
-            if current_ssim >= threshold:
-                best_factor = factor
-                # best_ssim = current_ssim
+        low, high, best = min_factor, max_factor, max_factor
+
+        while high - low > tol:
+            mid = (low + high) / 2
+            if is_valid_factor(mid):
+                best = mid
+                low = mid
             else:
-                break
+                high = mid
 
-        return best_factor
+        return best
 
     results = {}
     for filename in os.listdir(folder):
