@@ -1,37 +1,50 @@
 def resized_cube_files(folder: str = "parent_folder"):
     import os
-    import numpy as np
     from pymatgen.io.common import VolumetricData
     from skimage.transform import resize
     from skimage.metrics import structural_similarity as ssim
     import re
 
     def optimal_scaling_factor(
-        data, min_factor=0.1, max_factor=1.0, step=0.1, threshold=0.99
+        data,
+        min_factor=0.2,
+        max_factor=1.0,
+        tol=0.002,
+        threshold=0.9999,
     ):
         """
-        Determine the optimal scaling factor for downsampling 3D data without significant loss of information.
+        Find smallest scaling factor that preserves SSIM above threshold.
+        Pure binary search version.
         """
+
         original_shape = data.shape
-        best_factor = max_factor
 
-        for factor in np.arange(max_factor, min_factor, -step):
+        def compute_ssim(factor):
             new_shape = tuple(max(1, int(dim * factor)) for dim in original_shape)
-            resized_data = resize(
-                data, new_shape, anti_aliasing=True
-            )  # Upsample back to original shape for comparison
-            upsampled_data = resize(resized_data, original_shape, anti_aliasing=True)
-            current_ssim = ssim(
-                data, upsampled_data, data_range=data.max() - data.min()
-            )  # Compute structural_similarity between the original and upsampled data
 
-            if current_ssim >= threshold:
-                best_factor = factor
-                # best_ssim = current_ssim
+            resized = resize(data, new_shape, anti_aliasing=True)
+            upsampled = resize(resized, original_shape, anti_aliasing=True)
+
+            return ssim(
+                data,
+                upsampled,
+                data_range=data.max() - data.min(),
+            )
+
+        low, high = min_factor, max_factor
+
+        # Binary search for smallest valid factor
+        while (high - low) > tol:
+            mid = 0.5 * (low + high)
+            print(
+                f"Testing factor {mid:.4f} (SSIM={compute_ssim(mid):.6f})", flush=True
+            )
+            if compute_ssim(mid) >= threshold:
+                high = mid
             else:
-                break
+                low = mid
 
-        return best_factor
+        return high
 
     results = {}
     for filename in os.listdir(folder):

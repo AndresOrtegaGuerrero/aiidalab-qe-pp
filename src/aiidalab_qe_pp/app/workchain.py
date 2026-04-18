@@ -148,7 +148,7 @@ def get_builder(codes, structure, parameters):
         python=python_code,
         parameters=parameters,
         properties=properties,
-        structure=structure,
+        structure=aiida_node.inputs.structure,
     )
 
     update_resources(builder, codes)
