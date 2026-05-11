@@ -16,7 +16,7 @@ import numpy as np
 class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure):
     title = "Pp Settings"
     dependencies = [
-        "input_structure",
+        "structure_uuid",
     ]
 
     structure_selected = tl.Unicode("""<div style="line-height: 140%; padding-top: 0px; padding-bottom: 10px; color: red;">
@@ -95,7 +95,7 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
     stm_heights = tl.Unicode("2.0")
     stm_currents = tl.Unicode("0.1")
 
-    bands_calc_lis = []
+    bands_calc_list = []
     nscf_calc_list = []
 
     current_calc_lsda = tl.Bool(False)

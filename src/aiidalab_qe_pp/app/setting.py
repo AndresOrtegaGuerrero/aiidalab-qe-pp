@@ -20,7 +20,7 @@ class PpConfigurationSettingPanel(
 
         self._model.observe(
             self._on_input_structure_change,
-            "input_structure",
+            "structure_uuid",
         )
 
     def render(self):
@@ -29,27 +29,93 @@ class PpConfigurationSettingPanel(
 
         self.pwcalc_description = ipw.HTML(
             """
-            <div style="line-height: 1.4; padding-bottom: 10px;">
-                To run post-processing calculations, select a previous calculation (Band structure or Electronic projected density of states) where the chosen structure was used as input.
-                The widget below lists all available calculations for the selected structure.
-                Choose the type of calculation (Bands or NSCF) and then select the specific calculation you want to use.
+            <div style="
+                line-height: 1.5;
+                padding: 4px 2px;
+                font-size: 14px;
+                color: #2c3e50;
+            ">
 
-                <h5>Note:</h5>
-                <p>Be cautious with the "Delete work directory" option in Advanced settings, as it will remove the associated files permanently.</p>
+                <h3 style="
+                    margin-top: 0px;
+                    margin-bottom: 10px;
+                    font-weight: 600;
+                ">
+                    Post-processing calculations
+                </h3>
+
+                <p style="margin-bottom: 10px;">
+                    To run a post-processing calculation, select a previous
+                    <b>pw.x</b> calculation that used the selected structure as input.
+                </p>
+
+                <p style="margin-bottom: 10px;">
+                    The list below shows all compatible calculations available
+                    for this structure.
+                </p>
+
+                <ul style="
+                    margin-top: 6px;
+                    margin-bottom: 12px;
+                    padding-left: 22px;
+                ">
+                    <li>
+                        <b>Bands</b> — Band structure calculations
+                    </li>
+                    <li>
+                        <b>NSCF</b> — Non-self-consistent field calculations
+                        typically used for PDOS and post-processing
+                    </li>
+                </ul>
+
+                <p style="margin-bottom: 0px;">
+                    Select the calculation type and then choose the specific
+                    calculation you want to use.
+                </p>
+
             </div>
             """,
-            # layout=ipw.Layout(max_width="100%"),
         )
 
         self.comp_description = ipw.HTML(
             """
-            <div style="line-height: 1.4; padding-bottom: 10px;">
-                <h5>Note:</h5>
-                <p>When selecting a PwCalculation, ensure you choose the same computer in Step 3.0 (Computational resources).
-                The required files for post-processing calculations are stored on that computer.</p>
+            <div style="
+                line-height: 1.5;
+                padding: 4px 2px;
+                font-size: 14px;
+                color: #2c3e50;
+            ">
+
+                <h3 style="
+                    margin-top: 0px;
+                    margin-bottom: 10px;
+                    font-weight: 600;
+                ">
+                    Computational resources
+                </h3>
+
+                <p style="margin-bottom: 10px;">
+                    When selecting a <b>PwCalculation</b>, make sure to choose
+                    the same computer in
+                    <b>Step 3.0 – Computational Resources</b>.
+                </p>
+
+                <p style="margin-bottom: 10px;">
+                    The files required for post-processing calculations are stored
+                    on the computer where the original calculation was run.
+                </p>
+
+                <p style="
+                    margin-top: 12px;
+                    margin-bottom: 0px;
+                ">
+                    <b>Note:</b> Use the
+                    <i>Delete work directory</i> option in Advanced Settings
+                    with caution, as it will permanently remove calculation files.
+                </p>
+
             </div>
             """,
-            # layout=ipw.Layout(max_width="100%"),
         )
 
         # Structured selected HTML
