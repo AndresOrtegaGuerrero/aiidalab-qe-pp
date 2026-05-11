@@ -16,7 +16,7 @@ import numpy as np
 class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure):
     title = "Pp Settings"
     dependencies = [
-        "input_structure",
+        "structure_uuid",
     ]
 
     structure_selected = tl.Unicode("""<div style="line-height: 140%; padding-top: 0px; padding-bottom: 10px; color: red;">
