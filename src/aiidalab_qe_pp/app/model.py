@@ -95,7 +95,7 @@ class PpConfigurationSettingsModel(ConfigurationSettingsModel, HasInputStructure
     stm_heights = tl.Unicode("2.0")
     stm_currents = tl.Unicode("0.1")
 
-    bands_calc_lis = []
+    bands_calc_list = []
     nscf_calc_list = []
 
     current_calc_lsda = tl.Bool(False)

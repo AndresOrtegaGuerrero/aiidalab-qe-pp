@@ -29,27 +29,82 @@ class PpConfigurationSettingPanel(
 
         self.pwcalc_description = ipw.HTML(
             """
-            <div style="line-height: 1.4; padding-bottom: 10px;">
-                To run post-processing calculations, select a previous calculation (Band structure or Electronic projected density of states) where the chosen structure was used as input.
-                The widget below lists all available calculations for the selected structure.
-                Choose the type of calculation (Bands or NSCF) and then select the specific calculation you want to use.
+            <div style="
+                line-height: 1.45;
+                font-size: 14px;
+                color: #2c3e50;
+                padding: 2px 0px;
+            ">
 
-                <h5>Note:</h5>
-                <p>Be cautious with the "Delete work directory" option in Advanced settings, as it will remove the associated files permanently.</p>
+                <h4 style="
+                    margin-top: 0px;
+                    margin-bottom: 8px;
+                    font-weight: 600;
+                ">
+                    Post-processing calculations
+                </h4>
+
+                <p style="margin: 0 0 8px 0;">
+                    First, select a structure for which a calculation has already
+                    completed successfully.
+                </p>
+
+                <p style="margin: 0 0 8px 0;">
+                    To run a post-processing calculation, choose a previous
+                    <b>pw.x</b> calculation associated with the selected structure.
+                </p>
+
+                <ul style="
+                    margin: 4px 0 8px 18px;
+                    padding-left: 12px;
+                ">
+                    <li><b>Bands</b> — Band structure calculations</li>
+                    <li><b>NSCF</b> — Calculations typically used for PDOS and post-processing</li>
+                </ul>
+
+                <p style="margin: 0;">
+                    Select the calculation type and then choose the specific calculation
+                    you want to use from the list below.
+                </p>
+
             </div>
             """,
-            # layout=ipw.Layout(max_width="100%"),
         )
 
         self.comp_description = ipw.HTML(
             """
-            <div style="line-height: 1.4; padding-bottom: 10px;">
-                <h5>Note:</h5>
-                <p>When selecting a PwCalculation, ensure you choose the same computer in Step 3.0 (Computational resources).
-                The required files for post-processing calculations are stored on that computer.</p>
+            <div style="
+                line-height: 1.45;
+                font-size: 14px;
+                color: #2c3e50;
+                padding: 2px 0px;
+            ">
+
+                <h4 style="
+                    margin-top: 0px;
+                    margin-bottom: 8px;
+                    font-weight: 600;
+                ">
+                    Computational resources
+                </h4>
+
+                <p style="margin: 0 0 8px 0;">
+                    Make sure to select the same computer used for the original
+                    <b>PwCalculation</b> in
+                    <b>Step 3.0 – Computational Resources</b>.
+                </p>
+
+                <p style="margin: 0 0 8px 0;">
+                    The required files for post-processing are stored on that computer.
+                </p>
+
+                <p style="margin: 0;">
+                    <b>Note:</b> The <i>Delete work directory</i> option permanently
+                    removes calculation files.
+                </p>
+
             </div>
             """,
-            # layout=ipw.Layout(max_width="100%"),
         )
 
         # Structured selected HTML

@@ -360,9 +360,9 @@ class PPWorkChain(WorkChain):
     def submission_pythonjob_calc(self, workchain):
         """Submit a PythonJob calculation based on the calculation type."""
         inputs = prepare_pythonjob_inputs(
-            resized_cube_files,
+            function=resized_cube_files,
             code=self.inputs.python,
-            function_outputs=[{"name": "results"}],
+            output_ports=[{"name": "results"}],
             parent_folder=workchain.outputs.remote_folder,
             computer=self.inputs.python.computer,
             register_pickle_by_value=True,
