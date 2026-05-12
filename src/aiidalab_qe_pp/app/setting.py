@@ -30,47 +30,41 @@ class PpConfigurationSettingPanel(
         self.pwcalc_description = ipw.HTML(
             """
             <div style="
-                line-height: 1.5;
-                padding: 4px 2px;
+                line-height: 1.45;
                 font-size: 14px;
                 color: #2c3e50;
+                padding: 2px 0px;
             ">
 
-                <h3 style="
+                <h4 style="
                     margin-top: 0px;
-                    margin-bottom: 10px;
+                    margin-bottom: 8px;
                     font-weight: 600;
                 ">
                     Post-processing calculations
-                </h3>
+                </h4>
 
-                <p style="margin-bottom: 10px;">
-                    To run a post-processing calculation, select a previous
-                    <b>pw.x</b> calculation that used the selected structure as input.
+                <p style="margin: 0 0 8px 0;">
+                    First, select a structure for which a calculation has already
+                    completed successfully.
                 </p>
 
-                <p style="margin-bottom: 10px;">
-                    The list below shows all compatible calculations available
-                    for this structure.
+                <p style="margin: 0 0 8px 0;">
+                    To run a post-processing calculation, choose a previous
+                    <b>pw.x</b> calculation associated with the selected structure.
                 </p>
 
                 <ul style="
-                    margin-top: 6px;
-                    margin-bottom: 12px;
-                    padding-left: 22px;
+                    margin: 4px 0 8px 18px;
+                    padding-left: 12px;
                 ">
-                    <li>
-                        <b>Bands</b> — Band structure calculations
-                    </li>
-                    <li>
-                        <b>NSCF</b> — Non-self-consistent field calculations
-                        typically used for PDOS and post-processing
-                    </li>
+                    <li><b>Bands</b> — Band structure calculations</li>
+                    <li><b>NSCF</b> — Calculations typically used for PDOS and post-processing</li>
                 </ul>
 
-                <p style="margin-bottom: 0px;">
-                    Select the calculation type and then choose the specific
-                    calculation you want to use.
+                <p style="margin: 0;">
+                    Select the calculation type and then choose the specific calculation
+                    you want to use from the list below.
                 </p>
 
             </div>
@@ -80,38 +74,33 @@ class PpConfigurationSettingPanel(
         self.comp_description = ipw.HTML(
             """
             <div style="
-                line-height: 1.5;
-                padding: 4px 2px;
+                line-height: 1.45;
                 font-size: 14px;
                 color: #2c3e50;
+                padding: 2px 0px;
             ">
 
-                <h3 style="
+                <h4 style="
                     margin-top: 0px;
-                    margin-bottom: 10px;
+                    margin-bottom: 8px;
                     font-weight: 600;
                 ">
                     Computational resources
-                </h3>
+                </h4>
 
-                <p style="margin-bottom: 10px;">
-                    When selecting a <b>PwCalculation</b>, make sure to choose
-                    the same computer in
+                <p style="margin: 0 0 8px 0;">
+                    Make sure to select the same computer used for the original
+                    <b>PwCalculation</b> in
                     <b>Step 3.0 – Computational Resources</b>.
                 </p>
 
-                <p style="margin-bottom: 10px;">
-                    The files required for post-processing calculations are stored
-                    on the computer where the original calculation was run.
+                <p style="margin: 0 0 8px 0;">
+                    The required files for post-processing are stored on that computer.
                 </p>
 
-                <p style="
-                    margin-top: 12px;
-                    margin-bottom: 0px;
-                ">
-                    <b>Note:</b> Use the
-                    <i>Delete work directory</i> option in Advanced Settings
-                    with caution, as it will permanently remove calculation files.
+                <p style="margin: 0;">
+                    <b>Note:</b> The <i>Delete work directory</i> option permanently
+                    removes calculation files.
                 </p>
 
             </div>
